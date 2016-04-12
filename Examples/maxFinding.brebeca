@@ -1,0 +1,47 @@
+reactiveclass Rebec()
+{
+    statevars
+    {
+        int my_i;
+        boolean  done;
+    }   
+    msgsrv initial(int j,boolean  starter)
+    { 
+        my_i=j;
+        if(starter==true)
+        {
+            done=true;
+            max_algorithm(my_i);
+        }
+        else
+            done=false;
+    }   
+    msgsrv max_algorithm(int i)
+    {   
+        if(i<my_i)
+        {
+            if (done==false) {
+            done=true;
+            max_algorithm(my_i);
+            }
+        }
+        else
+        {
+            my_i=i;
+            done=true;
+        }
+    }
+}
+main
+{
+    Rebec rebec0(rebec1,rebec2,rebec3):(1,false);
+    Rebec rebec1(rebec0,rebec2,rebec3):(2,false);
+    Rebec rebec2(rebec0,rebec1,rebec3):(3,false);
+    Rebec rebec3(rebec0,rebec1,rebec2):(4,true);
+	constraints
+    {
+	and(and(and(and(con(rebec2,rebec0),con(rebec2,rebec1)), con(rebec2,rebec3)),and(and(con(rebec3,rebec0),con(rebec3,rebec2)), con(rebec1,rebec3))),
+      and(and(and(con(rebec0,rebec1),con(rebec0,rebec2)), con(rebec0,rebec3)),and(and(con(rebec1,rebec0),con(rebec1,rebec2)), con(rebec1,rebec3)))
+        )
+    }
+}
