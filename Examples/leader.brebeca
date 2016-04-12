@@ -1,0 +1,155 @@
+reactiveclass Node()
+{   
+    statevars
+    {    
+        int head;
+        boolean my_coin;
+        int tail;
+        int num_comp;
+        boolean comp;
+        boolean leader;
+    }
+    
+    msgsrv initial(boolean starter)
+    {   
+        if(starter==true)
+        {
+            start_next_round();
+			unicast(self,start_next_round());
+        }
+        my_coin=true;
+        head=3;
+        tail=0;
+        num_comp=3;
+        comp=true;
+        leader=false;
+    }
+    
+    msgsrv start_next_round()
+    {
+        if((head+tail)==num_comp)
+        {
+            if(head == 0)
+            {
+                if(comp==true)
+                    my_coin=true;
+            }
+            else
+                num_comp=head;
+            head=0;
+            tail=0;
+        }
+        if(my_coin==true)
+        {
+            if(num_comp>1)
+            {
+                    int ch;
+                    ch=?(0,1);
+                    if(ch==0)
+                    {
+                        my_coin=false;
+                        tail=tail+1;
+                    }
+                    else
+                    {
+                        my_coin=true;
+                        head=head+1;
+                    }
+                    rec_coin(my_coin);
+                    if((head+tail)==num_comp)
+                    {
+                        // rec_barrier(num_comp);
+                    }
+
+            }
+            else if(num_comp==1)
+                {
+                    leader=true;
+                }
+        }
+        else
+        {
+            comp=false;
+            num_comp=0;
+            tail=0;
+            head=0;
+        }
+    }
+    
+    msgsrv rec_coin(boolean c)
+    {
+        if((head+tail)==num_comp)
+        {
+            if(head == 0)
+            {
+                if(comp==true)
+                    my_coin=true;
+            }
+            else
+                num_comp=head;
+            head=0;
+            tail=0;
+        }
+        if(my_coin==true)
+        {
+            if(c==true)
+            {
+                head=head+1;
+            }
+            else 
+            {
+                tail=tail+1;
+            }
+            if((head+tail)==num_comp)
+            {
+                rec_barrier(num_comp);
+            }
+        }
+        else
+        {
+            comp=false;
+            num_comp=0;
+            tail=0;
+            head=0;
+        }
+    }
+}
+
+reactiveclass Bar()
+{
+    statevars
+    {
+        int barrier;
+    }
+    
+    msgsrv initial(boolean starter)
+    {   
+        barrier=0;
+    }
+    
+    msgsrv rec_barrier(int comps)
+    {   
+        barrier=barrier+1;
+        if(barrier==comps)
+        {
+            start_next_round();
+            barrier=0;
+        }
+    }
+    
+}
+
+main
+{
+       Node  rebec0(rebec1,rebec2,ba):(true);
+       Node  rebec1(rebec0,rebec2,ba):(false);
+       Node  rebec2(rebec0,rebec1,ba):(false);
+       Bar ba(rebec0,rebec2,rebec0):(false);
+	   
+	constraints
+    {
+	and(and(and(and(con(rebec2,rebec0),con(rebec2,rebec1)), con(rebec2,ba)),and(and(con(ba,rebec0),con(ba,rebec2)), con(rebec1,ba))),
+      and(and(and(con(rebec0,rebec1),con(rebec0,rebec2)), con(rebec0,ba)),and(and(con(rebec1,rebec0),con(rebec1,rebec2)), con(rebec1,ba)))
+        )
+    }
+}
