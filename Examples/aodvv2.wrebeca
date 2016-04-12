@@ -1,0 +1,785 @@
+reactiveclass Node()
+{
+    statevars
+    {
+        int sn; //node_sequence_number
+        int ip;
+        ///////////////////////////////////////
+        //routing table
+        ///////////////////////////////////////
+        
+        // routing table consists of a set of routing table entries, exactly one for each known destination
+        int[] dip;//destination IP address
+        int[] dsn; //destination sequence number
+        int[] route_state; // 0=>unconfirmed, 1=>valid(active or idle) and 2=>Invalid
+        boolean[] neigh_state; // false means unknown(or blacklist) and true means confirmed
+        int[][] hops; //number of hops
+        int[][] nhop;
+        boolean[][] pre; //if interested true, all neighbours who are “interested” in the route to dip
+        boolean[] exist;
+        
+        ///////////////////////////////////////
+        //received_rout_discovery table (rreqs)
+        ///////////////////////////////////////
+        //int[][] rec_broadcast_id;
+        //int[] pointer_source_address;
+        
+        
+        ///////////////////////////////////////
+        //store :data , dip 
+        //
+        ///////////////////////////////////////
+        int[] store; //pointer: dip=>data for that dip
+        ///////////////////////////////////////
+        //dests rip==>rsn 0:no rsn
+        ///////////////////////////////////////
+        //int[] dest;
+    }
+    msgsrv initial(int i, boolean starter)
+    { 
+        ip          = i;
+        sn          = 0;
+        dip         = new int[4];
+        dsn         = new int[4];
+        route_state = new int[4];
+        neigh_state = new boolean[4];
+        hops        = new int[4][];
+        nhop        = new int[4][];
+        pre         = new boolean[4][]; //number of neighbours
+        exist       = new boolean[4];  
+        //rec_broadcast_id = new int[4][];
+        // pointer_source_address = new int[4];
+        store                  = new int[4];
+        //dest                   = new int[4];
+        
+        // destination=des;
+        
+        for(int j=0;j<4;j++)
+        {
+            store[j]=0;
+            pre[j]=new boolean[4];
+            
+            nhop[j] = new int[4];
+            hops[j] = new int[4];
+            neigh_state[j]=false;
+            route_state[j]=0;
+            for(int k=0;k<4;k++)
+            {
+                pre[j][k]=false;
+                hops[j][k]=-1;
+                nhop[j][k]=-1;
+                
+            }
+            
+        }
+        if(starter==true)
+        {   
+            unicast(self,rec_newpkt(7,3)); //a--->d
+        }
+            
+    }
+    
+    msgsrv rec_newpkt(int data ,int dip_)
+    {
+       int[]  dip_sqn=new int[4];
+        boolean[] affected_neighbours=new boolean[4];
+        int max = 0,po,rreqid;
+        if(ip==dip_ ) {
+            /* the DATA packet is intended for this node */
+            unicast(self,rec_deliver(data));
+        }
+        else
+        { 
+            /* the DATA packet is not intended for this node */
+            store[dip_]=data;
+            if(route_state[dip_]==1)
+            {
+                /* valid route to dip*/
+                /* forward packet */
+                int n_hop = nhop[dip_][0];
+                unicast(n_hop,rec_pkt(data ,dip_ ,self))
+                succ:
+                {
+                    store[dip_]=0;
+                }
+                unsucc:
+                {
+                    /* If the transmission is unsuccessful, a RERR message is generated */
+                    /*packet transmission is unsuccessful, a RERR message is generated */
+                    route_state[dip_]=2;                      
+                    dip_sqn[dip_]=dsn[dip_];
+                    for(int i=0;i<4;i++)
+                    {
+                        if(route_state[i]==1 && nhop[i][0]==n_hop){   
+                            route_state [i]= 2;
+                            dip_sqn[i]=dsn[i];
+                            for(int j=0;j<4;j++)
+                            {
+                                if(pre[i][j]==true){
+                                    affected_neighbours[j]=true;
+                                  }
+                            }
+                        }
+                    }   
+
+                      groupcast(affected_neighbours,rec_rerr(dip_,self,dip_sqn));
+                }  
+                //send new request
+                if(sn<3)
+                {                           
+                    sn++;
+                    rec_rreq(0,dip_,dsn[dip_],self,sn,self);
+                    
+                }
+            }
+            else{
+                /* no valid route to dip*/
+                /*send a new rout discovery request*/
+                if(sn<3)
+                {                           
+                    sn++;
+                    unicast(self,resend_rreq(dip_));
+                    rec_rreq(0,dip_,dsn[dip_],self,sn,self);
+                }
+            
+            }
+        }       
+    }   
+    
+    msgsrv resend_rreq(int dip_)
+    {
+        if(sn<3)
+        {                           
+            sn++;
+            //unicast(self,resend_rreq(dip_));
+            rec_rreq(0,dip_,dsn[dip_],self,sn,self);
+        }
+    }
+        
+    msgsrv rec_rreq(int hops_,int dip_ ,int dsn_ ,int oip_ ,int osn_ ,int sip_) 
+    {
+        //if(exist[sip_]==false)
+        //{
+        //    neigh_state[sip_] = false; //bidirectionallity has not been confirmed
+        //}       
+        //if it has already received a RREQ with the same BRODCAST_ID and SOURCE_ADDRESS 
+        //it drops the redundant RREQ and does not rebroadcast it
+        int[]  dip_sqn=new int[4];
+        int route_num;
+        boolean[] affected_neighbours=new boolean[4];
+        boolean process_msg = false;
+        //expunge a route nonditerministicly
+        int expunge   ;
+        expunge     = ?(0,1);
+ /*       if(expunge==1)
+        {
+            int route;
+            route = ?(0,1,2,3);
+            for(int i=0;i<4;i++)
+            {
+                nhop[route][i]=-1;
+                hops[route][i]=-1;
+                pre[route][i]=false;
+            }
+            route_state[route]=0;
+            dsn[route]=-1;
+        }
+ */       
+        
+        if(ip!=oip_)
+        {
+            if(exist[oip_]==false)
+            {
+                exist[oip_]=true;
+                dsn[oip_]=osn_;
+                route_num = 0;
+                if(neigh_state[sip_]==true)
+                {
+                    route_state[oip_]=1;
+                }
+                else
+                {
+                    route_state[oip_]=0;
+                }
+                hops[oip_][0]=hops_;
+                nhop[oip_][0]=sip_;
+                process_msg = true;
+
+                //for(int i=0;i<4;i++)
+                //{
+                //    pre[oip_][i]=false;
+                //}
+            }
+            else
+            {
+                if(route_state[oip_]==0)
+                {
+                    dsn[oip_]=osn_;
+                    route_num = 0;
+                    for(int i=0;i<4;i++)
+                    {
+                        if(nhop[oip_][i]==-1 || nhop[oip_][i]==sip_)
+                        {
+                            route_num = i;
+                            break;
+                        }
+                    }
+                    if(neigh_state[sip_]==true)
+                    {
+                        route_state[oip_]=1;
+                        //clear other nhop_hops
+                        for(int i=0;i<4;i++)
+                        {
+                            hops[oip_][i]=-1;
+                            nhop[oip_][i]=-1;    
+                        } 
+                        hops[oip_][0]=hops_;
+                        nhop[oip_][0]=sip_;
+                    }
+                    else
+                    {
+                        route_state[oip_]=0;
+                        hops[oip_][route_num]=hops_;
+                        nhop[oip_][route_num]=sip_;
+                    }
+                }
+                else
+                {
+                    //only one route exist and it is invalid or confirmed
+                    //update the routing table if((dsn[oip_]==osn_ && hops[oip_]>hops_) || dsn[oip_]<osn_ || route_state[oip_]==2)                   
+                    if(route_state[oip_]==2 || neigh_state[sip_]==true)
+                    {
+                        //route is invalid, update the existing route 
+                        if((dsn[oip_]==osn_ && hops[oip_][0]>hops_) || dsn[oip_]<osn_ )
+                        {
+                            dsn[oip_]=osn_;
+                            if(neigh_state[sip_]==true)
+                                route_state[oip_]=1;
+                            else
+                                route_state[oip_]=0;
+                            hops[oip_][0]=hops_;
+                            nhop[oip_][0]=sip_;
+                            process_msg = true;
+                        }
+                    }
+                    else 
+                    { 
+                        //route_state is valid and neigh_state[sip_] is not confrimed, new route would be added if it offers improvement 
+                        if(nhop[oip_][0]!=sip_)
+                        {
+                           if((dsn[oip_]==osn_ && hops[oip_][0]>hops_) || dsn[oip_]<osn_ )
+                           {
+                               
+                                dsn[oip_]=osn_;
+                                hops[oip_][1]=hops_;
+                                nhop[oip_][1]=sip_;
+                                process_msg = true;
+                           }
+                        }
+                    } 
+                }
+            }
+            if(process_msg==true)
+            {
+                if(ip==dip_)
+                {
+                    boolean su = false;
+                    pre[dip_][sip_]=true;
+                    for(int i=0;i<4;i++)
+                    {
+                        int nh = nhop[dip_][i];
+                        if(nh!=-1)
+                            pre[oip_][nh]=true;
+                    }
+                    
+                    for(int i=0;i<4;i++)
+                    {
+                        if(nhop[oip_][i]!=-1)
+                        {
+                            int n_hop = nhop[oip_][i];
+                            sn        = sn+1;
+                            /* unicast a RREP towards oip of the RREQ */
+                            unicast(n_hop,rec_rrep(0 , dip_ , sn , oip_ , self))    
+                            succ:
+                            {
+                                route_state[oip_]=1;
+                                neigh_state[n_hop]=true;
+                                // pre[dip_][n_hop]=true; 
+                                su = true;                         
+                                break;
+                                
+                            }
+                            unsucc:
+                            {
+                               
+                                neigh_state[n_hop]=false;
+                            }    
+                        }
+                    }
+                    if(su==false)
+                    {
+                         /*packet transmission is unsuccessful, a RERR message is generated */
+                         //dip_sqn[oip_]=osn_;
+                         //route_state[dip_]=2;
+                                //if(nhop[j][0]==nhop[oip_][r])
+                                //{
+                                //    route_state [j]= 2;
+                                //    dip_sqn[j]=dsn[j];
+                                //    for(int k=0;k<4;k++)
+                                //    {
+                                //        if(pre[j][k]==true){
+                                //            affected_neighbours[k]=true;
+                                //            }
+                                //    }
+                                //    break;
+                                //}
+                        route_state[oip_]=2;
+                        dip_sqn[oip_]=dsn[oip_];
+                        for(int k=0;k<4;k++)
+                        {
+                            if(pre[oip_][k]==true){
+                                affected_neighbours[k]=true;
+                                }
+                        }
+                        for(int j=0;j<4;j++)
+                        {
+                            if(route_state[j]==1){   
+                                for(int r=0;r<4;r++)
+                                {
+                                    if(nhop[oip_][r]!=-1)
+                                    {
+                                        if(nhop[j][0]==nhop[oip_][r])
+                                        {
+                                            route_state [j]= 2;
+                                            dip_sqn[j]=dsn[j];
+                                            for(int k=0;k<4;k++)
+                                            {
+                                                if(pre[j][k]==true){
+                                                    affected_neighbours[k]=true;
+                                                    }
+                                            }
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }                     
+                         groupcast(affected_neighbours,rec_rerr(dip_,self,dip_sqn));
+                    }
+                }
+                else
+                {
+                    hops_ = hops_+1;
+                    rec_rreq(hops_,dip_,dsn_,oip_,osn_,self);
+                }
+            }    
+        }     
+    }  
+    
+    msgsrv rec_rrep(int hops_ ,int dip_ ,int dsn_ ,int oip_ ,int sip_)
+    {
+       if(exist[sip_]==false)
+        {
+            neigh_state[sip_] = false; //bidirectionallity has not been confirmed
+        }       
+        int[]  dip_sqn=new int[4];
+        boolean[] affected_neighbours=new boolean[4];
+        boolean process_msg = false;
+        int n_hop,route_num;
+        if(exist[dip_]==false)
+        {
+            exist[dip_]=true;
+            dsn[dip_]=dsn_;
+            route_num = 0;
+            if(neigh_state[sip_]==true)
+            {
+                route_state[dip_]=1;
+            }
+            else
+            {
+                route_state[dip_]=0;
+            }
+            hops[dip_][0]=hops_;
+            nhop[dip_][0]=sip_;
+            process_msg = true;
+
+            //for(int i=0;i<4;i++)
+            //{
+            //    pre[oip_][i]=false;
+            //}
+        }
+        else
+        {
+            if(route_state[dip_]==0)
+            {
+                dsn[dip_]=dsn_;
+                route_num = 0;
+                for(int i=0;i<4;i++)
+                {
+                    if(nhop[dip_][i]==-1 || nhop[dip_][i]==sip_)
+                    {
+                        route_num = i;
+                        break;
+                    }
+                }
+                if(neigh_state[sip_]==true)
+                {
+                    route_state[dip_]=1;
+                    //clear other nhop_hops
+                    for(int i=0;i<4;i++)
+                    {
+                        hops[dip_][i]=-1;
+                        nhop[dip_][i]=-1;    
+                    } 
+                    hops[dip_][0]=hops_;
+                    nhop[dip_][0]=sip_;
+                }
+                else
+                {
+                    route_state[dip_]=0;
+                    hops[dip_][route_num]=hops_;
+                    nhop[dip_][route_num]=sip_;
+                }
+            }
+            else
+            {
+                //only one route exist and it is invalid or confirmed
+                //update the routing table if((dsn[oip_]==dsn_ && hops[oip_]>hops_) || dsn[oip_]<dsn_ || route_state[oip_]==2)                   
+                if(route_state[dip_]==2 || neigh_state[sip_]==true)
+                {
+                    //route is invalid, update the existing route 
+                    if((dsn[dip_]==dsn_ && hops[dip_][0]>hops_) || dsn[dip_]<dsn_ )
+                    {
+                        dsn[dip_]=dsn_;
+                        if(neigh_state[sip_]==true)
+                            route_state[dip_]=1;
+                        else
+                            route_state[dip_]=0;
+                        hops[dip_][0]=hops_;
+                        nhop[dip_][0]=sip_;
+                        process_msg = true;
+                    }
+                }
+                else 
+                { 
+                    //route_state is valid and neigh_state[sip_] is not confrimed, new route would be added if it offers improvement 
+                    if(nhop[dip_][0]!=sip_)
+                    {
+                        if((dsn[dip_]==dsn_ && hops[dip_][0]>hops_) || dsn[dip_]<dsn_ )
+                       {
+                           
+                           dsn[dip_]=dsn_;
+                           hops[dip_][1]=hops_;
+                           nhop[dip_][1]=sip_;
+                            process_msg = true;
+                       }
+                    }
+                } 
+            }
+        }
+        if(process_msg==true)
+        {
+            /* this node is the originator of the corresponding RREQ */
+            /* a packet may now be sent; this is done in the process AODV */
+            if(ip==oip_ )
+            {
+                //if( route_state[dip_]==1 )
+                //{
+                //    int data = store[dip_];
+                //    n_hop    = nhop[dip_][0];
+                //    sn       = sn+1;
+                //    unicast(n_hop,rec_pkt(data,dip_,self))  
+                //    succ:
+                //    {
+                //        route_state[dip_]=1;
+                //        neigh_state[n_hop]=true;
+                //       
+                //    }
+                //    unsucc:
+                //    {
+                //        /*packet transmission is unsuccessful, a RERR message is generated */
+                //    }    
+                //}
+            }
+            else
+            {
+                hops_   = hops_+1;
+                boolean su = false;
+                //pre[dip_][sip_]=true;
+                //for(int i=0;i<4;i++)
+                //{
+                //    int nho = nhop[oip_][i];
+                //    if(nho!=-1)
+                //    {
+                //        pre[dip_][nho]=true;
+                //       
+                //        for(int j=0;j<4;j++)
+                //        {
+                //            int nhd = nhop[dip_][j];
+                //            if(nhd!=-1)
+                //               pre[nhd][nho]=true;
+                //               
+                //        }
+                //    }
+                //}
+                pre[dip_][sip_]=true;
+                for(int i=0;i<4;i++)
+                {
+                    int nh = nhop[dip_][i];
+                    if(nh!=-1)
+                        pre[oip_][nh]=true;
+                }
+                //pre[dip_][sip_]=true;
+                //pre[dip_][oip_]=true;
+                for(int i=0;i<4;i++)
+                {
+                    if(nhop[oip_][i]!=-1)
+                    {
+                        n_hop = nhop[oip_][i];
+                        //int n_hop_oip = nhop[oip_][0];
+                        unicast(n_hop,rec_rrep(hops_,dip_,dsn_,oip_,self))
+                        succ:
+                        {
+                            route_state[oip_]=1;
+                            neigh_state[n_hop]=true;
+                            su = true;
+                            //pre[dip][n_hop_oip]=true;
+                            break;
+                        }
+                        unsucc:
+                        {
+                            neigh_state[n_hop]=false;
+                        }    
+                    }
+                }
+                if(su==false)
+                {
+                     /*packet transmission is unsuccessful, a RERR message is generated */
+                     // dip_sqn[oip_]=osn_;
+                     // route_state[dip_]=2;
+                    //for(int j=0;j<4;j++)
+                    //{
+                    //    if(route_state[j]!=2 ){   
+                    //        
+                    //        for(int r=0;r<4;r++)
+                    //        {
+                    //            for(int rr=0;rr<4;rr++)
+                    //            {
+                    //                if(nhop[j][rr]==nhop[oip_][r])
+                    //                {
+                    //                    route_state [j]= 2;
+                    //                    dip_sqn[j]=dsn[j];
+                    //                    for(int k=0;k<4;k++)
+                    //                    {
+                    //                        if(pre[j][k]==true){
+                    //                            affected_neighbours[k]=true;
+                    //                            }
+                    //                    }
+                    //                    //break;
+                    //                }
+                    //            }
+                    //            //if(nhop[j][0]==nhop[oip_][r])
+                    //            //{
+                    //            //    route_state [j]= 2;
+                    //            //    dip_sqn[j]=dsn[j];
+                    //            //    for(int k=0;k<4;k++)
+                    //            //    {
+                    //            //        if(pre[j][k]==true){
+                    //            //            affected_neighbours[k]=true;
+                    //            //            }
+                    //            //    }
+                    //            //    break;
+                    //            //}
+                    //        }
+                    //    }
+                    //}   
+                    dip_sqn[oip_]=dsn[oip_];
+                    route_state[oip_]=2;
+                    for(int k=0;k<4;k++)
+                    {
+                        if(pre[oip_][k]==true){
+                            affected_neighbours[k]=true;
+                            }
+                    }
+                    for(int j=0;j<4;j++)
+                    {
+                        if(route_state[j]==1){   
+                            for(int r=0;r<4;r++)
+                            {
+                                if(nhop[oip_][r]!=-1 && nhop[j][0]==nhop[oip_][r])
+                                {
+                                    route_state [j]= 2;
+                                    dip_sqn[j]=dsn[j];
+                                    for(int k=0;k<4;k++)
+                                    {
+                                        if(pre[j][k]==true){
+                                            affected_neighbours[k]=true;
+                                            }
+                                    }
+                                     break;
+                                }
+                            }
+                        }
+                    }      
+                     groupcast(affected_neighbours,rec_rerr(dip_,self,dip_sqn));
+                 }
+            }
+        }
+    }
+    
+    msgsrv rec_rerr(int source_, int sip_ ,int[] rip_rsn) 
+    {
+        int[]  dip_sqn=new int[4];
+        int rreqid,max=0,po;
+        boolean[] affected_neighbours=new boolean[4];
+        if(ip==source_)
+        {
+            //stop regenerating, possibly send new rreq
+            //if(store[i]!=0 && source==true)
+            //{
+            //    po=pointer_source_address[self];
+            //    max=0;
+            //    for(int k=0;k<po;k++)
+            //    {
+            //        if(rec_broadcast_id[self][k]>max)
+            //        {
+            //            max=rec_broadcast_id[self][k];
+            //        }
+            //    }       
+            //    rreqid=max+1;
+            //    if(sn<3)
+            //    {
+            //        dsn[i]++;
+            //        if(dsn[i]<rsn)
+            //        {
+            //            dsn[i]=rsn;
+            //        }
+            //        else
+            //        {
+            //        }
+            //        sn++;
+            //        po++;
+            //        pointer_source_address[self]=po;
+            //        rec_broadcast_id[self][po]=rreqid;
+            //        rec_rreq(0,rreqid,i,dsn[i],dsk[i],ip,sn,ip);
+            //    }
+            //}
+        }
+        else
+        {
+            //regenerate rrer for invalidated routes
+            for(int i=0;i<4;i++)
+            {
+                int rsn=rip_rsn[i];
+                if(route_state[i]==1 && nhop[i][0]==sip_ && dsn[i]<rsn && rsn!=0)
+                {
+                    route_state [i]= 2;
+                    dip_sqn[i]=dsn[i];
+                    for(int j=0;j<4;j++)
+                    {
+                        if(pre[i][j]==true){
+                            affected_neighbours[j]=true;
+                            }
+                    }
+                } 
+            }
+            groupcast(affected_neighbours,rec_rerr(source_,self,dip_sqn));
+        }
+    }
+    
+  msgsrv rec_pkt(int data ,int dip_ ,int sip_) 
+    {   
+        boolean[] pres;
+        int[]  dip_sqn=new int[4];
+        boolean[] affected_neighbours=new boolean[4];
+        int rreqid,max=0,po;
+        if( dip_ == ip )
+        {       
+            /* the DATA packet is intended for this node */
+            unicast(ip,rec_deliver(data));
+        }
+        else
+        {
+            /* the DATA packet is not intended for this node */
+            store[dip_]=data;
+            if(route_state[dip_]==1)
+            {
+                /* valid route to dip */
+                /* forward packet */
+                int n_hop = nhop[dip_][0];
+                //pre[dip][sip_]=true;
+                unicast(n_hop,rec_pkt(data ,dip_ ,sip_))
+                succ:
+                {
+                    store[dip_]=0;
+                }
+                unsucc:
+                {
+                    /* If the transmission is unsuccessful, a RERR message is generated */
+                    /*packet transmission is unsuccessful, a RERR message is generated */
+                    route_state[dip_]=2;                      
+                    dip_sqn[dip_]=dsn[dip_];
+                    for(int i=0;i<4;i++)
+                    {
+                        if(route_state[i]==1 && nhop[i][0]==n_hop){   
+                            route_state [i]= 2;
+                            dip_sqn[i]=dsn[i];
+                            for(int j=0;j<4;j++)
+                            {
+                                if(pre[i][j]==true){
+                                    affected_neighbours[j]=true;
+                                  }
+                            }
+                        }
+                    }   
+
+                     groupcast(affected_neighbours,rec_rerr(dip_,self,dip_sqn));
+                }  
+
+            }
+            else
+            {
+                /* no valid route to dip */
+                /* no local repair occurs; data is lost */
+                if(route_state[dip_]==2)
+                {
+                    /* invalid route to dip */
+                    /* if the route is invalid, a RERR is sent to the precursors */
+                    //precs == i where pre[i] is true 
+                    dip_sqn[dip_]=dsn[dip_];
+                    for(int i=0;i<4;i++)
+                    {
+                        //groupcast(precs , rec_rerr({(dip, sqn[dip]))} , self)); 
+                        if(pre[dip_][i]==true)
+                        {
+                            affected_neighbours[i]=true;
+                        }
+                    }
+                    groupcast(affected_neighbours,rec_rerr(dip_,self,dip_sqn));
+                }
+            }
+        }
+
+    }
+    
+    msgsrv rec_deliver(int data)
+    {
+    
+    }
+   
+}
+
+
+
+main
+{
+    Node node0(node1,node3):(0,true);
+    Node node1(node0,node3):(1,false);
+    Node node2(node3):(2,false);
+    Node node3(node0,node2,node1):(3,false);
+    constraints
+    {
+       // and(and(and(con(node0,node1),!con(node0,node2)),and(con(node0,node3),!con(node1,node2))),and(con(node1,node3), con(node2,node3)))
+        and(and(con(node0,node1), con(node2,node3)),and(con(node1,node3),con(node0,node3)))
+    }      
+}
