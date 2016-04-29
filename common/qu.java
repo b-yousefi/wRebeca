@@ -118,7 +118,7 @@ public class qu implements Istorage {
 	public boolean hasInitMessage() {
 		if (storage.size() == 0)
 			return false;
-		return storage.stream().anyMatch(x -> x.getMethodID().equals("initial"));
+		return storage.stream().anyMatch(x -> x.getMethodID().contains("initial"));
 	}
 
 	public message getInitialMessage() {

@@ -28,12 +28,13 @@ public class stateSpaceBuilder {
 	boolean lts;
 	boolean gradually = false;
 	protected Timer timer;
-
-	public stateSpaceBuilder(boolean actl_, boolean mcrl_, boolean lts_) {
+    //final int max_thread=64;
+	public stateSpaceBuilder(boolean actl_, boolean mcrl_, boolean lts_,int max_thread) {
 		actl = actl_;
 		mcrl = mcrl_;
 		lts = lts_;
-		setPool(new ForkJoinPool());
+		
+		setPool(new ForkJoinPool(max_thread));
 		timer = new Timer();
 		TimerTask printNumStates = new TimerTask() {
 			@Override
@@ -129,7 +130,7 @@ public class stateSpaceBuilder {
 			}
 		if (lts)
 			try {
-				trans.write_aut();
+				trans.write_aut(false);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -154,7 +155,7 @@ public class stateSpaceBuilder {
 			label = msg.getMethodID() + "(";
 		label += msg.getMsgArgs().toString() + " )";
 		if (actl)
-			label = Topology.topologies.get(top).connectionInfo(current_st.getId()) + ", " + msg.getMethodID();
+			label = Topology.topologies.get(top).connectionInfo(current_st.getId(),msg.getRecID()) + ", " + msg.getMethodID();
 		return label;
 	}
 
@@ -168,23 +169,35 @@ public class stateSpaceBuilder {
 	}
 
 	public static void addInvariant(Method invariant) {
+		invariant.setAccessible(true);
 		invariants.add(invariant);
+
 	}
 
-	public boolean check_invariants(glState gl, int source_) throws IOException {
+	public  synchronized  boolean check_invariants(glState gl, int source_) throws IOException {
+		
 		boolean holds = true;
 		if (getInvariants() != null) {
 			for (Method m : getInvariants()) {
-				m.setAccessible(true);
-
+				
 				try {
-					Object[] arguments = new Object[] { gl, null };
-					Object var = m.invoke(this, arguments);
+					Object var;
+					synchronized(m)
+					{
+						Object[] arguments = new Object[] { gl, null };
+					
+						 var = m.invoke(this, arguments);
+					}
 					if ((boolean) var) {
 						holds = false;
-						stop = true;
-						trans.printCounterExample(gl, source_, hash);
+						if(stop==false)
+						{
+							stop = true;
+						
+						trans.printCounterExample(gl, source_, hash);				
+						}
 						break;
+
 					}
 				} catch (IllegalAccessException e) {
 					// TODO Auto-generated catch block
@@ -195,7 +208,7 @@ public class stateSpaceBuilder {
 				} catch (InvocationTargetException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
-				}
+				} 
 			}
 		}
 		return holds;
@@ -203,10 +216,19 @@ public class stateSpaceBuilder {
 
 	public void put_work(glState states) throws IOException {
 		int st_source = hash.get_stNumber(states);
-		if (check_invariants(states, st_source) == true && stop == false) {
+//		if (stop == false) {
+//			invariantChecker th = new invariantChecker(states, this, st_source);
+//			Object result=th.fork();
+//			th.join();
+////System.out.println(result.toString());
+//		}
+		check_invariants(states, st_source);
+		if (stop == false) {
 			// if (states.Global_state.Sum(x => x.Value.Qu.Count) != 0)
 			// {
 			for (int item : Topology.topologies.keySet()) {
+				if(!stop)
+				{
 				glState temp = states.deepCopy();
 				temp.setTop(item);
 				if (states.getClass() == glStateDynamicWithTau.class) {
@@ -228,9 +250,8 @@ public class stateSpaceBuilder {
 				} else {
 					createNewFork(temp, st_source);
 				}
+				}
 			}
-		} else {
-			stop = true;
 		}
 	}
 
@@ -248,6 +269,14 @@ public class stateSpaceBuilder {
 
 	public void setPool(ForkJoinPool pool) {
 		this.pool = pool;
+	}
+
+	public boolean isStop() {
+		return stop;
+	}
+
+	public void setStop(boolean stop) {
+		this.stop = stop;
 	}
 
 }

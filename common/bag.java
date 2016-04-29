@@ -111,12 +111,12 @@ public class bag implements Istorage {
 	{
 		if(storage.size()==0)
 			return false;
-		return storage.stream().anyMatch(x->x.getMethodID().equals("initial"));
+		return storage.stream().anyMatch(x->x.getMethodID().contains("initial"));
 	}
 	
 	public message getInitialMessage(){
 		if(this.hasInitMessage())
-			return storage.stream().filter(x->x.getMethodID().equals("initial")).findFirst().get();
+			return storage.stream().filter(x->x.getMethodID().contains("initial")).findFirst().get();
 		return null;
 	}
 }

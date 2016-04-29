@@ -1,11 +1,13 @@
 ﻿package wRebeca.common;
 
+import java.io.BufferedReader;
 /**
  * @author Behnaz Yousefi
  *
  */
 import java.io.File;
 import java.io.FileFilter;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Array;
@@ -24,9 +26,16 @@ public class trans {
 	private static Map<Integer, HashSet<trans>> transitions;
 	private static Object lock_tr = new Object();
 	private static Object lock_trPut = new Object();
+	private static List<String> selectedFields;
+	static int numCounterExamples = 0;
 	// int stNum;
 	private static String outputPath;
 
+	public static synchronized void incCounter()
+	{
+		numCounterExamples++;
+	}
+	
 	public static void setOutputPath(String modelerPath) {
 		outputPath = modelerPath;
 	}
@@ -65,7 +74,57 @@ public class trans {
 			}
 		}
 	}
+	public static void printCounterExample(glState gl, int stNum, visitedGlstates hash) {
+		StringBuilder str = new StringBuilder();
+		createCounterExample(gl, stNum, hash, str,new HashSet<Integer>());
+		
+	}
+	
+	static int numCounters = 0;
+	private static  void createCounterExample(glState gl, int stNum, visitedGlstates hash, StringBuilder str,HashSet<Integer> visited) {
+		List<Integer> sources = transitions.keySet().stream()
+				.filter(i -> transitions.get(i).stream().anyMatch(x -> x.stateNum == stNum))
+				.collect(Collectors.toList());
+		str.append(gl.toString());
+		str.append("\n");
 
+		for (int s : sources) {
+			StringBuilder str2 = new StringBuilder();
+			str2.append(str);
+			str2.append(s + "-->" + stNum);
+			str2.append("\n");
+			if (s == 0) {
+				try {
+				//	synchronized (lock_inv) {
+					trans.incCounter();
+				//	}
+					FileWriter writerp = new FileWriter( outputPath + "/Output/invariant" + trans.getNumCounterExamples() + ".txt", true);
+					try {
+						writerp.write(str2.toString());
+
+					} finally {
+						writerp.close();
+					
+
+					}
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} else
+			{
+				if(!visited.contains(s))
+				{
+					HashSet<Integer> visited_temp=new HashSet<Integer>();
+					visited_temp.addAll(visited);
+					visited_temp.add(s);
+					createCounterExample(hash.getGlState(stNum), s, hash, str2,visited_temp);
+				}
+			}
+		}
+	}
+	
+	
 	public static void add_st(int source) {
 		synchronized (lock_trPut) {
 			if (!transitions.containsKey(source))
@@ -80,7 +139,8 @@ public class trans {
 		stateNum = des_;
 		label = label_;
 	}
-
+	public trans()
+	{}
 	public int getStateNum() {
 		return stateNum;
 	}
@@ -125,7 +185,7 @@ public class trans {
 		return true;
 	}
 
-	public static void write_aut() throws IOException {
+	public static void write_aut(boolean forMcrl) throws IOException {
 		FileWriter writer = new FileWriter(outputPath + "/Output/state_space.aut");
 		try {
 			String str = "des ( 0" + " ," + trans.getNumOfTransitions() + " ," + trans.getNumOfStates() + " )";
@@ -133,7 +193,13 @@ public class trans {
 			writer.write("\n");
 			for (int source : trans.getTransitions().keySet()) {
 				for (trans item : trans.getTransitions().get(source)) {
-					str = "( " + source + " , \"" + item.getLabel() + "\" ," + item.getStateNum() + " )";
+					if(!forMcrl)
+					{
+						str = "( " + source + " , \"" + item.getLabel() + "\" ," + item.getStateNum() + " )";
+					}else
+					{
+						str = "( " + source + " , \"" + item.getLabel().substring(item.getLabel().indexOf(":")+1, item.getLabel().length()) + "\" ," + item.getStateNum() + " )";
+					}
 					writer.write(str);
 					writer.write("\n");
 				}
@@ -145,12 +211,155 @@ public class trans {
 			writer.close();
 		}
 	}
-
+private static int numOfInfo_transitions=0;
+	@SuppressWarnings("resource")
 	public static void write_mcrl2(visitedGlstates hash, int allInitializedState) throws IOException {
-		Files.delete(Paths.get(outputPath + "/Output/state_space.mcrl2"));
-		String acts = write_action(hash, allInitializedState);
-		write_file(acts, outputPath + "/Output/state_space.mcrl2");
+		if(Files.exists(Paths.get(outputPath + "/Output/state_space.mcrl2")))
+			Files.delete(Paths.get(outputPath + "/Output/state_space.mcrl2"));
+	//	write_file(acts, outputPath + "/Output/state_space.mcrl2");
+		write_aut(true);
+		FileWriter writer = new FileWriter(outputPath + "/Output/state_space.aut",true);
+		for (int source : trans.getTransitions().keySet()) {
+			writer.write(glStateInfoTostring(source,hash));		
+		}
+		writer.close();
+		BufferedReader reader = new BufferedReader(new FileReader((outputPath + "/Output/state_space.aut")));
+		String line=null;
+		String str = "des ( 0" + " ," +(trans.getNumOfTransitions()+ numOfInfo_transitions)+ " ," + trans.getNumOfStates() + " )";
+		writer = new FileWriter(outputPath + "/Output/stateSpaceMcrl.aut");
+		writer.write(str+"\n");
+		line=reader.readLine();
+		while((line=reader.readLine())!=null)
+		{
+			writer.write(line+"\n");
+		}
+		writer.close();
+	}
+	
+	private static String glStateInfoTostring(int stNum,visitedGlstates hash)
+	{
+		System.out.println(trans.getNumOfStates());
+		StringBuilder str = new StringBuilder();
+		Class<? extends State> rebec_type;
+		Field[] prop_s;
+		String selfTrans="";
+		for (wRebeca.common.State item : hash.getGlState(stNum).getStates()) {
+			
+			rebec_type = item.getClass();
+			prop_s = rebec_type.getDeclaredFields();
+				for (Field prp : prop_s) { 
+					selfTrans="("+stNum+",\"info"+item.getId();
+					prp.setAccessible(true);
+					if (prp.getName() != "storage" && prp.getName() != "id") {
+						selfTrans+=prp.getName()+"(";
+						if (!prp.getType().isArray()) {
+							try {
+								if(prp.get(item)!=null)
+									str.append(selfTrans+prp.get(item).toString()+")\","+stNum+")\n");
+								numOfInfo_transitions++;
+							} catch (IllegalArgumentException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							} catch (IllegalAccessException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+						}else
+						{
+							Object arr=null;
+							int lenght_1=0;
+							try {
+								if(prp.get(item)!=null)
+								{
+									arr = Array.get(prp.get(item), 0);
+									lenght_1=Array.getLength(prp.get(item));
+								}
+							} catch (ArrayIndexOutOfBoundsException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							} catch (IllegalArgumentException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							} catch (IllegalAccessException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+							if(arr != null ){
+							if ( arr.getClass().isArray()) {
+								String arrayStr="";
+								for(int i=0;i<lenght_1;i++)
+								{
+									Object arr2=null;
+									try {
+										arr2 = Array.get(prp.get(item), i);
+									} catch (ArrayIndexOutOfBoundsException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									} catch (IllegalArgumentException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									} catch (IllegalAccessException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									}
+									if(arr2!=null && arr2.getClass().isArray())
+									{
+										String temp=arrayObjectToString(arr2);
+										 arrayStr+=""+temp.substring(0,temp.length()-1)+",";
 
+									}
+								}
+								if(arrayStr!="")
+								{
+									arrayStr=selfTrans+arrayStr.substring(0,arrayStr.length()-1)+")\","+stNum+")\n";
+									str.append(arrayStr);
+									numOfInfo_transitions++;
+								}
+							}else
+							{
+								String arrayStr="";
+								try {
+									arrayStr = arrayObjectToString(prp.get(item));
+								} catch (IllegalArgumentException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								} catch (IllegalAccessException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
+								if(arrayStr!="")
+								{
+								arrayStr=selfTrans+arrayStr.substring(0,arrayStr.length()-1)+")\","+stNum+")\n";
+								str.append(arrayStr);
+								numOfInfo_transitions++;
+								}
+							}
+							}
+						}
+					}
+				}
+		}
+		return str.toString();
+	}
+	
+	private static String arrayObjectToString(Object obj)
+	{
+		String arrayStr="";
+		try {
+			
+			for(int i=0;i<Array.getLength(obj);i++)
+			{
+				arrayStr+= Array.get(obj, i).toString()+",";
+			}
+
+		} catch (ArrayIndexOutOfBoundsException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalArgumentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return arrayStr;
 	}
 
 	private static void write_file(String str, String path) throws IOException {
@@ -163,40 +372,11 @@ public class trans {
 		}
 	}
 
-	public static void printCounterExample(glState gl, int stNum, visitedGlstates hash) {
-		StringBuilder str = new StringBuilder();
-		createCounterExample(gl, stNum, hash, str);
 
-	}
 
-	static int numCounters = 0;
-
-	private static void createCounterExample(glState gl, int stNum, visitedGlstates hash, StringBuilder str) {
-		List<Integer> sources = transitions.keySet().stream()
-				.filter(i -> transitions.get(i).stream().anyMatch(x -> x.stateNum == stNum))
-				.collect(Collectors.toList());
-		str.append(gl.toString());
-		str.append("\n");
-
-		for (int s : sources) {
-			StringBuilder str2 = new StringBuilder();
-			str2.append(str);
-			str2.append(s + "-->" + stNum);
-			str2.append("\n");
-			if (s == 0) {
-				try {
-					write_file(str2.toString(), outputPath + "/Output/invariant" + (numCounters++) + ".txt");
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			} else
-				createCounterExample(hash.getGlState(stNum), s, hash, str2);
-		}
-	}
-
+	@SuppressWarnings("unused")
 	private static String write_action(visitedGlstates hash, int allInitializedState) throws IOException {
-		String actions = "changeTop;\n";
+		String actions = "act \n changeTop;\n";
 
 		Field[] prop_s;
 		Class<?> rebec_type;
@@ -223,11 +403,11 @@ public class trans {
 			}
 			if (translated != null && method_args.class.isAssignableFrom(translated)) {
 				prop_s = translated.getFields();
-				actions += translated.getSimpleName() + ":";
+				actions += translated.getSimpleName().substring(0,translated.getSimpleName().lastIndexOf("_")) + ":";
 				for (Field type_arg : translated.getDeclaredFields()) {
 					switch (type_arg.getType().getName()) {
 					case "int":
-						actions += "Nat#";
+						actions += "Int#";
 						break;
 					case "boolean":
 						actions += "Bool#";
@@ -247,19 +427,19 @@ public class trans {
 			if (!rebec_types.contains(rebec_type)) {
 				rebec_types.add(rebec_type);
 				rebecs_number = gl.get_number_of_states(rebec_type);
-				;
+			
 
 				for (Field prp : prop_s) {
 					prp.setAccessible(true);
 					if (prp.getName() != "storage" && prp.getName() != "id") {
 						if (!prp.getType().isArray()) {
 							for (int i = 0; i < rebecs_number; i++) {
-								actions += "inf" + i + prp.getName() + ",";
-								acts += "inf" + i + prp.getName() + ",";
+								actions += "info" + i + prp.getName() + ",";
+								acts += "info" + i + prp.getName() + ",";
 							}
 							actions = actions.substring(0, actions.length() - 1) + ":";
 							if (prp.getType().equals(Integer.TYPE) || prp.equals(Integer.class))
-								actions = actions.substring(0, actions.length()) + "Nat;\n";
+								actions = actions.substring(0, actions.length()) + "Int;\n";
 							else if (prp.getType().equals(boolean.class) || prp.getClass().equals(Boolean.class))
 								actions = actions.substring(0, actions.length()) + "Bool;\n";
 						} else {
@@ -272,9 +452,9 @@ public class trans {
 								e.printStackTrace();
 							}
 							for (int i = 0; i < rebecs_number; i++) {
-								actions += "inf" + i + prp.getName() + ",";
+								actions += "info" + i + prp.getName() + ",";
 
-								acts += "inf" + i + prp.getName() + ",";
+								acts += "info" + i + prp.getName() + ",";
 
 							}
 							actions = actions.substring(0, actions.length() - 1) + ":";
@@ -298,7 +478,7 @@ public class trans {
 								if (ar2.getClass().getComponentType().equals(int.class)
 										|| ar2.getClass().getComponentType().equals(Integer.class)) {
 									for (int i = 0; i < c; i++) {
-										actions += "Nat#";
+										actions += "Int#";
 									}
 
 									actions = actions.substring(0, actions.length() - 1);
@@ -316,7 +496,7 @@ public class trans {
 							// System.out.println(ar2.getClass());
 							if (ar2.getClass().equals(int.class) || ar2.getClass().equals(Integer.class)) {
 								for (int it = 0; it < lenght_1; it++)
-									actions += "Nat#";
+									actions += "Int#";
 								actions = actions.substring(0, actions.length() - 1);
 								actions += ";\n";
 							} else if (ar2.getClass().equals(boolean.class) || ar2.getClass().equals(Boolean.class)) {
@@ -333,7 +513,23 @@ public class trans {
 		acts = acts.substring(0, acts.length() - 1);
 		acts += "},S0);";
 		write_file(actions, outputPath + "\\Output\\state_space.mcrl2");
-		write_file("proc", outputPath + "\\Output\\state_space.mcrl2");
+		//write_file("proc", outputPath + "\\Output\\state_space.mcrl2");
 		return acts;
+	}
+
+	public static List<String> getSelectedFields() {
+		return selectedFields;
+	}
+
+	public static void setSelectedFields(List<String> selectedFields) {
+		trans.selectedFields = selectedFields;
+	}
+
+	public static String getOutputPath() {
+		return outputPath;
+	}
+
+	public static int getNumCounterExamples() {
+		return numCounterExamples;
 	}
 }

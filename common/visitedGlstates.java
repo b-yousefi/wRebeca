@@ -1,5 +1,6 @@
 ﻿package wRebeca.common;
 
+
 /**
  * @author Behnaz Yousefi
  *
@@ -12,6 +13,7 @@ public class visitedGlstates {
 	public Object lock_put = new Object();
 
 	public glState getGlState(int stNum) {
+		
 		for (glState item : tablee.keySet()) {
 			if (tablee.get(item) == stNum)
 				return item;
@@ -37,9 +39,11 @@ public class visitedGlstates {
 
 	public Integer insert(glState gl) {
 		Integer stNum = -1;
-		stNum = get_stNumber(gl);
-		if (stNum == -1) {
+		
+		
 			synchronized (lock_put) {
+				stNum = get_stNumber(gl);
+				if (stNum == -1) {
 				glState gll = gl.deepCopy();
 				if (tablee.put(gll, state_number) == null) {
 					stNum = state_number;
