@@ -39,13 +39,15 @@ public class Topology {
 		}
 	}
 
-	public String connectionInfo(Integer stID) {
+	public String connectionInfo(Integer stID, List<Integer> recievers) {
 		String str = "{";
 		for (Integer i = 0; i < rebecs_count; i++) {
-			if (connections[stID].get(i)) {
-				str += stID.toString() + " ->" + i.toString() + " ,";
-			} else {
-				str += stID.toString() + " -\\>" + i.toString() + " ,";
+			if ((recievers.size() == 0 || recievers.contains(i))) {
+				if (connections[stID].get(i)) {
+					str += stID.toString() + " ->" + i.toString() + " ,";
+				} else {
+					str += stID.toString() + " -\\>" + i.toString() + " ,";
+				}
 			}
 
 		}
@@ -108,6 +110,15 @@ public class Topology {
 		}
 
 	}
+
+	// public void get_all()
+	// {
+	// int c = 0;
+	// foreach (Topology top in changeTop.all_possibleTopologies())
+	// {
+	// topologies.Add(c++, top);
+	// }
+	// }
 
 	public Topology(Topology top) {
 		this.connections = new BitSet[Topology.rebecs_count];
