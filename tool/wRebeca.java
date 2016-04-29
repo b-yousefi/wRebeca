@@ -1,5 +1,4 @@
 package wRebeca.tool;
-
 /**
  * @author Behnaz Yousefi
  *
@@ -8,17 +7,13 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.EventQueue;
-
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
 import javax.swing.*;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
-
 import org.fife.ui.rtextarea.*;
-
-
 import org.fife.ui.rsyntaxtextarea.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -34,6 +29,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.List;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
@@ -46,7 +42,13 @@ public class wRebeca {
 
 	private JFrame frame;
 	private JMenuItem mntmOpen;
+	JMenuItem mntmCompile;
+	JMenu mnVerification;
 	JTree trSource;
+	JMenuItem mntmCreateStateSpace;
+	JMenu mnSource;
+	JMenu mnFile;
+	RTextScrollPane sp;
 
 	/**
 	 * Launch the application.
@@ -82,6 +84,81 @@ public class wRebeca {
 		});
 	}
 
+	private boolean create_stateSpace() {
+		FileFilter filter = new FileFilter() {
+			@Override
+			public boolean accept(File pathname) {
+				return pathname.toString().matches(".*.java");
+			}
+		};
+		boolean succ = false;
+		if (inputFile != null)   {
+			String pkgName = inputFile.getName().toString().split("\\.")[0];
+			String inputDirctory = inputFile.getParentFile().toString();
+
+			JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+			FileOutputStream errorStream = null;
+			FileOutputStream outputStream = null;
+			try {
+				errorStream = new FileOutputStream(inputDirctory + "//" + pkgName + "/Errors.txt");
+				outputStream = new FileOutputStream(inputDirctory + "//" + pkgName + "/Output.txt");
+
+			} catch (FileNotFoundException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			////
+			File modelerFile = new File(inputDirctory + "//" + pkgName + "//modeler.java");
+			String changedModeler = FileToString(modelerFile);
+
+			String stateSpaceConfig = "super(" + compileInfo.clts + "," + compileInfo.mcrl + "," + compileInfo.lts
+					+","+ compileInfo.max_thread_num+");";
+			System.out.println(stateSpaceConfig);
+			changedModeler = changedModeler.replace("super(false,false,true,4);", stateSpaceConfig);
+
+			try {
+				FileWriter writer = new FileWriter(modelerFile);
+				writer.write(changedModeler);
+				writer.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			File[] translatedFiles = new File(inputDirctory + "//" + pkgName).listFiles((filter));
+			String[] javaFiles = new String[translatedFiles.length];
+			for (int i = 0; i < translatedFiles.length; i++) {
+				javaFiles[i] = translatedFiles[i].getPath();
+			}
+			if (outputStream != null && errorStream != null) {
+				System.out.println("Start compiling translated files of the given model " + pkgName + " in "
+						+ inputFile.toString());
+				int compilationResult = compiler.run(null, outputStream, errorStream, javaFiles);
+				System.out.println(compilationResult);
+
+				if (compilationResult == 0) {
+					System.out.println("Compilation is successful");
+					System.out.println("state space creation is started with the following configuration:");
+					System.out.println("Storage type: " + (compileInfo.queue ? "Queue" : "Bag") + " "
+							+ (compileInfo.reduction ? " with applying reduction" : " without applying reduction"));
+					try {
+						System.out.println("Start creating the state space");
+						// System.out.println(System.getProperty("java.class.path"));
+						succ = runProcess("java -cp \"" + inputDirctory + "\";" + System.getProperty("java.class.path")
+								+ " " + pkgName + ".modeler \"" + inputDirctory + "\\" + pkgName + "\"");
+					} catch (Exception ex) {
+						// TODO Auto-generated catch block
+						System.out.println("Sorry!!! State space generation is not possible duo to some errors");
+						ex.printStackTrace();
+					}
+				} else {
+
+					System.out.println("Compilation Failed");
+				}
+			}
+		}
+		return succ;
+	}
+
 	/**
 	 * Create the application.
 	 */
@@ -115,17 +192,13 @@ public class wRebeca {
 		JMenuBar menuBar = new JMenuBar();
 		frame.setJMenuBar(menuBar);
 
-		JMenu mnFile = new JMenu("File");
+		mnFile = new JMenu("File");
 		menuBar.add(mnFile);
-		FileFilter filter = new FileFilter() {
-			@Override
-			public boolean accept(File pathname) {
-				return pathname.toString().matches(".*.java");
-			}
-		};
+
 		mntmOpen = new JMenuItem("Open");
 		mntmOpen.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
+
 				chooser = new JFileChooser();
 				chooser.setCurrentDirectory(new java.io.File("."));
 				chooser.setDialogTitle("Select a File");
@@ -137,8 +210,8 @@ public class wRebeca {
 				chooser.addChoosableFileFilter(bRebecaFilter);
 				chooser.addChoosableFileFilter(wRebecaFilter);
 				if (chooser.showOpenDialog(mntmOpen) == JFileChooser.APPROVE_OPTION) {
-					System.out.println("getCurrentDirectory(): " + chooser.getCurrentDirectory());
-					System.out.println("getSelectedFile() : " + chooser.getSelectedFile());
+					System.out.println("CurrentDirectory: " + chooser.getCurrentDirectory());
+					System.out.println("SelectedFile: " + chooser.getSelectedFile());
 					filePath = chooser.getSelectedFile().getPath();
 					inputFile = chooser.getSelectedFile();
 					try {
@@ -153,7 +226,9 @@ public class wRebeca {
 						DefaultTreeModel treeModel = (DefaultTreeModel) trSource.getModel();
 						treeModel.setRoot(r);
 						treeModel.reload();
-
+						mnVerification.setEnabled(false);
+						mntmCompile.setEnabled(true);
+						mntmCreateStateSpace.setEnabled(false);
 					} catch (FileNotFoundException e1) {
 						// TODO Auto-generated catch block
 						e1.printStackTrace();
@@ -181,7 +256,19 @@ public class wRebeca {
 					// save
 					saveFile();
 					// new
-					textArea = new RSyntaxTextArea(20, 60);
+					inputFile = null;
+					filePath = null;
+					try {
+						File file = new File("newFile.txt");
+						if (!Files.exists(file.toPath()))
+							file.createNewFile();
+						textArea.read(new FileReader("newFile.txt"), null);
+						treeModel.setRoot(new DefaultMutableTreeNode("Nothing"));
+						treeModel.reload();
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
 				}
 			}
 		});
@@ -205,148 +292,142 @@ public class wRebeca {
 		});
 		mnFile.add(mntmExit);
 
-		JMenu mnSource = new JMenu("Run");
+		mnSource = new JMenu("Run");
 		menuBar.add(mnSource);
 
-		JMenuItem mntmCompile = new JMenuItem("Compile");
+		mntmCompile = new JMenuItem("Compile");
+		mntmCompile.setEnabled(false);
 		mntmCompile.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				compile = new frmCompile(errorList);
-				System.out.println("configure compiling options");
-				compile.showFrm(filePath);
+				if (inputFile == null) {
+					saveFile();
+				}
+				if (inputFile != null) {
+					compile = new frmCompile(errorList, frame);
+					System.out.println("configure compiling options");
+					compile.showFrm(filePath);
+				}
 				// compile.showFrm();
 
 			}
 		});
 		mnSource.add(mntmCompile);
 
-		JMenuItem mntmCreateStateSpace = new JMenuItem("Create State Space");
+		mntmCreateStateSpace = new JMenuItem("Create State Space");
+		mntmCreateStateSpace.setEnabled(false);
 		mntmCreateStateSpace.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if (inputFile != null) {
-					String pkgName = inputFile.getName().toString().split("\\.")[0];
-					String inputDirctory = inputFile.getParentFile().toString();
-
-					JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-					FileOutputStream errorStream = null;
-					FileOutputStream outputStream = null;
-					try {
-						errorStream = new FileOutputStream(inputDirctory + "//" + pkgName + "/Errors.txt");
-						outputStream = new FileOutputStream(inputDirctory + "//" + pkgName + "/Output.txt");
-
-					} catch (FileNotFoundException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					}
-
-					File[] translatedFiles = new File(inputDirctory + "//" + pkgName).listFiles((filter));
-					String[] javaFiles = new String[translatedFiles.length];
-					// javaFiles[0]="-Xlint:unchecked ";
-					for (int i = 0; i < translatedFiles.length; i++) {
-						javaFiles[i] = translatedFiles[i].getPath();
-					}
-					if (outputStream != null && errorStream != null) {
-						System.out.println(
-								"Start compiling translated files of model " + pkgName + " in " + inputFile.toString());
-						int compilationResult = compiler.run(null, outputStream, errorStream, javaFiles);
-						System.out.println(compilationResult);
-
-						if (compilationResult == 0) {
-							System.out.println("Compilation is successful");
-							try {
-								System.out.println("Start creating the state space");
-								// System.out.println(System.getProperty("java.class.path"));
-								runProcess("java -cp \"" + inputDirctory + "\";" + System.getProperty("java.class.path")
-										+ " " + pkgName + ".modeler \"" + inputDirctory + "\\" + pkgName + "\"");
-							} catch (Exception ex) {
-								// TODO Auto-generated catch block
-								ex.printStackTrace();
-							}
-						} else {
-
-							System.out.println("Compilation Failed");
-						}
-					}
+				if (compileInfo.mcrl) {
+					if (!compileInfo.clts)
+						compileInfo.lts = true;
+					compileInfo.mcrl = false;
 				}
-
+				create_stateSpace();
 			}
 		});
 		mnSource.add(mntmCreateStateSpace);
+		mnVerification = new JMenu("Verification");
+		mnVerification.setEnabled(false);
+		mnSource.add(mnVerification);
 
-		JMenuItem mntmVerify = new JMenuItem("Verify");
-		mntmVerify.addActionListener(new ActionListener() {
+		JMenuItem mntmInvariant = new JMenuItem("Invariant");
+		mntmInvariant.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
+				load_invariant();
+				compileInfo.mcrl = false;
+				compileInfo.lts = true;
+				create_stateSpace();
+			}
+		});
+		mnVerification.add(mntmInvariant);
+
+		JMenuItem mntmMcrl = new JMenuItem("mcrl");
+		mntmMcrl.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				compileInfo.mcrl = true;
+				compileInfo.lts = false;
 				String pkgName = inputFile.getName().toString().split("\\.")[0];
 				String inputDirctory = inputFile.getParentFile().toString();
-				File modelerFile = new File(inputDirctory + "/" + pkgName + "/modeler.java");
-				File invFile;
-				if (modelerFile.exists()) {
-					chooser = new JFileChooser();
-					chooser.setCurrentDirectory(new java.io.File("."));
-					chooser.setDialogTitle("Select a File");
-					chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
-					FileNameExtensionFilter filter = new FileNameExtensionFilter("invariant file", "java");
-					chooser.setFileFilter(filter);
-					if (chooser.showOpenDialog(mntmOpen) == JFileChooser.APPROVE_OPTION) {
-						System.out.println("getCurrentDirectory(): " + chooser.getCurrentDirectory());
-						System.out.println("getSelectedFile() : " + chooser.getSelectedFile());
-						invFile = chooser.getSelectedFile();
-						String invariant;
-						String modeler;
-						try {
-							invariant = FileToString(invFile);
-							modeler = FileToString(modelerFile);
-							modeler = modeler.replace("//Invariant Part", invariant);
-							String[] invFunctions;
 
-							invFunctions = invariant.split("//Invariant");
-							String invInsertion = "Method inv; \n try { ";
-
-							for (int i = 0; i < invFunctions.length; i++) {
-								int start = invFunctions[i].indexOf("public");
-								if (start != -1) {
-									String invar = invFunctions[i].substring(start + "public Boolean".length() + 1,
-											invFunctions[i].indexOf("(")).trim();
-									invInsertion += "inv = this.getClass().getDeclaredMethod (\"" + invar
-											+ "\",new Class[]{glState.class,Object[].class}); \n this.addInvariant(inv) ;";
+				chooser = new JFileChooser();
+				chooser.setCurrentDirectory(new java.io.File("."));
+				chooser.setDialogTitle("Select a File");
+				chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+				FileNameExtensionFilter formulaFilter = new FileNameExtensionFilter("textual	µ-Calculus(.mcf)",
+						"mcf");
+				chooser.setFileFilter(formulaFilter);
+				if (chooser.showOpenDialog(mntmOpen) == JFileChooser.APPROVE_OPTION) {
+					System.out.println("getSelectedFile() : " + chooser.getSelectedFile());
+					try {
+						Files.deleteIfExists(Paths.get(inputDirctory + "/" + pkgName + "/Output/stateSpaceMcrl.aut"));
+					} catch (IOException e2) {
+						// TODO Auto-generated catch block
+						e2.printStackTrace();
+					}
+					if (create_stateSpace()) {
+						new Thread(new Runnable() {
+							public void run() {
+								while (!Files.exists(
+										Paths.get(inputDirctory + "/" + pkgName + "/Output/stateSpaceMcrl.aut"))) {
+									try {
+										Thread.sleep(1000);
+									} catch (InterruptedException e1) {
+										// TODO Auto-generated catch block
+										e1.printStackTrace();
+									}
+								}
+								try {
+									String command = "";
+									if (Files.exists(
+											Paths.get(inputDirctory + "/" + pkgName + "/Output/stateSpaceMcrl.aut"))) {
+										command = "lts2pbes \"" + inputDirctory + "/" + pkgName
+												+ "/Output/stateSpaceMcrl.aut" + "\" \"" + inputDirctory + "/" + pkgName
+												+ "/Output/stateSpaceMcrl.pbes" + "\"  --data=\"" + inputDirctory + "/"
+												+ pkgName + "/Output/state_space.mcrl2" + "\" --formula=\""
+												+ chooser.getSelectedFile().getPath() + "\"";
+										System.out.println(command);
+										runProcess(command);
+										if (Files.exists(Paths
+												.get(inputDirctory + "/" + pkgName + "/Output/stateSpaceMcrl.pbes"))) {
+											command = "pbes2bool \"" + inputDirctory + "/" + pkgName
+													+ "/Output/stateSpaceMcrl.pbes"
+													+ "\" --erase=none --rewriter=jitty --search=breadth-first --strategy=0 --verbose";
+											System.out.println(command);
+											runProcess(command);
+										}
+									}
+								} catch (Exception e1) {
+									// TODO Auto-generated catch block
+									e1.printStackTrace();
 								}
 							}
-							invInsertion += "} catch (NoSuchMethodException e) {e.printStackTrace();} catch (SecurityException e) {e.printStackTrace();}";
-
-							modeler = modeler.toString().replace("//Adding Invariants", invInsertion);
-							FileWriter writer = new FileWriter(modelerFile);
-							writer.write(modeler);
-							writer.close();
-
-						} catch (IOException e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
-						}
-						// invFile.toString().split("//Invariant");
-					} else {
-						System.out.println("No Selection ");
+						}).start();
 					}
-
 				}
-
 			}
-
 		});
-		mnSource.add(mntmVerify);
+		mnVerification.add(mntmMcrl);
 
 		JMenu mnHelp = new JMenu("Help");
 		menuBar.add(mnHelp);
 
 		JMenuItem mntmUserManual = new JMenuItem("User Manual");
 		mnHelp.add(mntmUserManual);
-
+		mntmUserManual.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+		});
 		JPanel cpCenter = new JPanel(new BorderLayout());
 		frame.setContentPane(cpCenter);
 		JPanel cp = new JPanel(new BorderLayout());
 		textArea = new RSyntaxTextArea(20, 60);
 		textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
 		textArea.setCodeFoldingEnabled(true);
-		RTextScrollPane sp = new RTextScrollPane(textArea);
+		sp = new RTextScrollPane(textArea);
 		// cp.add(sp);
 		JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
 		cp.add(splitPane, BorderLayout.CENTER);
@@ -358,22 +439,12 @@ public class wRebeca {
 
 		JTabbedPane tabbedPane = new JTabbedPane(JTabbedPane.TOP);
 		tabbedPane.setPreferredSize(new Dimension(tabbedPane.getSize().width, (int) (frame.getHeight() * 0.3)));
-		// cp.add(tabbedPane, BorderLayout.SOUTH);
 		splitPane.setRightComponent(tabbedPane);
-
-		// JSplitPane splitPaneV = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,);
-
-		// s cp.add(splitPane, BorderLayout.CENTER);
-
-		// PrintStream standardOut = System.out;
-		// PrintStream standardErr = System.err;
 
 		JTextArea txtrOutput = new JTextArea();
 		PrintStream printStream = new PrintStream(new CustomOutputStream(txtrOutput));
 		System.setOut(printStream);
 		System.setErr(printStream);
-		// standardOut.println("hey to consol");
-		// txtrOutput.setTabSize(100);
 		JScrollPane scrollPaneOut = new JScrollPane();
 		tabbedPane.addTab("Output", null, scrollPaneOut, null);
 		scrollPaneOut.setViewportView(txtrOutput);
@@ -417,35 +488,40 @@ public class wRebeca {
 
 	}
 
-	private static void runProcess(String command) throws Exception {
+	static Thread process;
+
+	private static boolean runProcess(String command) throws Exception {
 		Process p = Runtime.getRuntime().exec(command);
 		final InputStream stream = p.getInputStream();
-		new Thread(new Runnable() {
-			public void run() {
-				BufferedReader reader = null;
-				try {
-					reader = new BufferedReader(new InputStreamReader(stream));
-					String line = null;
-					while ((line = reader.readLine()) != null) {
-						System.out.println(line);
-					}
-				} catch (Exception e) {
-					// TODO
-				} finally {
-					if (reader != null) {
-						try {
-							reader.close();
-						} catch (IOException e) {
-							// ignore
+		if (process == null || !process.isAlive()) {
+			process = new Thread(new Runnable() {
+				public void run() {
+					BufferedReader reader = null;
+					try {
+						reader = new BufferedReader(new InputStreamReader(stream));
+						String line = null;
+						while ((line = reader.readLine()) != null) {
+							System.out.println(line);
+						}
+					} catch (Exception e) {
+						// TODO
+					} finally {
+						if (reader != null) {
+							try {
+								reader.close();
+							} catch (IOException e) {
+								// ignore
+							}
 						}
 					}
 				}
-			}
-		}).start();
-		// ProcessBuilder pb = new ProcessBuilder(command);
-		// pb.redirectOutput(Redirect.INHERIT);
-		// pb.redirectError(Redirect.INHERIT);
-		// Process p = pb.start();
+			});
+			process.start();
+			return true;
+		} else {
+			System.out.println("Program is busy!!!!! Please wait");
+			return false;
+		}
 	}
 
 	private void saveFile() {
@@ -463,6 +539,7 @@ public class wRebeca {
 			chooser.addChoosableFileFilter(wRebecaFilter);
 			if (chooser.showSaveDialog(mntmSave) == JFileChooser.APPROVE_OPTION) {
 				filePath = chooser.getSelectedFile().getPath();
+				inputFile = chooser.getSelectedFile();
 			}
 
 		}
@@ -470,6 +547,7 @@ public class wRebeca {
 			try {
 				textArea.write(new FileWriter(filePath));
 				textArea.read(new FileReader(filePath), null);
+				mntmCompile.setEnabled(true);
 			} catch (IOException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
@@ -526,4 +604,65 @@ public class wRebeca {
 
 		return str;
 	}
+
+	private void load_invariant() {
+		String pkgName = inputFile.getName().toString().split("\\.")[0];
+		String inputDirctory = inputFile.getParentFile().toString();
+		File modelerFile = new File(inputDirctory + "/" + pkgName + "/modeler.java");
+		File invFile;
+		if (modelerFile.exists()) {
+			chooser = new JFileChooser();
+			chooser.setCurrentDirectory(new java.io.File("."));
+			chooser.setDialogTitle("Select a File");
+			chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+			FileNameExtensionFilter filter = new FileNameExtensionFilter("invariant file", "java");
+			chooser.setFileFilter(filter);
+			if (chooser.showOpenDialog(mntmOpen) == JFileChooser.APPROVE_OPTION) {
+				System.out.println("invariant file: " + chooser.getSelectedFile());
+				invFile = chooser.getSelectedFile();
+				String invariant;
+				String modeler;
+				try {
+					invariant = FileToString(invFile);
+					modeler = FileToString(modelerFile);
+					modeler = modeler.replace("//Invariant Part", invariant);
+					String[] invFunctions;
+
+					invFunctions = invariant.split("//Invariant");
+					String invInsertion = "Method inv; \n try { ";
+
+					for (int i = 0; i < invFunctions.length; i++) {
+						int start = invFunctions[i].indexOf("public");
+						if (start != -1) {
+							String invar = invFunctions[i]
+									.substring(start + "public Boolean".length() + 1, invFunctions[i].indexOf("("))
+									.trim();
+							invInsertion += "inv = this.getClass().getDeclaredMethod (\"" + invar
+									+ "\",new Class[]{glState.class,Object[].class}); \n this.addInvariant(inv) ;";
+						}
+					}
+					invInsertion += "} catch (NoSuchMethodException e) {e.printStackTrace();} catch (SecurityException e) {e.printStackTrace();}";
+
+					modeler = modeler.toString().replace("//Adding Invariants", invInsertion);
+					FileWriter writer = new FileWriter(modelerFile);
+					writer.write(modeler);
+					writer.close();
+					System.out.println("invariant file has been succefully loaded");
+					System.out.println("state space creation is started to check the given invariants");
+					create_stateSpace();
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					System.out.println("there has been a problem while loading the invariant file");
+
+					e1.printStackTrace();
+				}
+				// invFile.toString().split("//Invariant");
+			} else {
+				System.out.println("No Selection ");
+			}
+
+		}
+
+	}
+
 }

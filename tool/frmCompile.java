@@ -1,5 +1,8 @@
 package wRebeca.tool;
-
+/**
+ * @author Behnaz Yousefi
+ *
+ */
 
 import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
@@ -10,7 +13,7 @@ import javax.swing.ButtonGroup;
 import javax.swing.GroupLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JDialog;
+import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JTable;
@@ -23,10 +26,12 @@ import javax.swing.table.DefaultTableModel;
 
 import translator.Translate;
 import translator.errorInfo;
+import javax.swing.JFormattedTextField;
+import javax.swing.JLabel;
 
 public class frmCompile {
 
-	private JDialog frame;
+	private JFrame frame;
 	private JPanel contentPane;
 	/**
 	 * Launch the application.
@@ -58,14 +63,20 @@ public class frmCompile {
 	JCheckBox chckbxLts;
 	JButton btnCancel;
 	JButton btnOk;
+	JFrame mainWindow;
 	/**
 	 * Create the application.
+	 * @param parent 
+	 * @wbp.parser.entryPoint
 	 */
-	public frmCompile(JTable errorlist) {
+	public frmCompile(JTable errorlist, JFrame parent) {
+		mainWindow=parent;
 		initialize(errorlist);
+		
 	}
 	
 	static String  filePath="";
+	private JFormattedTextField txtMaxThread;
 
 	public boolean showFrm(String filePath_)
 	{	
@@ -88,10 +99,10 @@ public class frmCompile {
 	 * Initialize the contents of the frame.
 	 */
 	private void initialize(JTable errorlist) {
-		frame = new JDialog();
+		frame = new JFrame();
 		frame.setBounds(100, 100, 296, 161);
-		frame.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-		frame.setTitle("Select Compile Status");
+		frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		frame.setTitle("Compile Configuration");
 		//setResizable(false);
 		//setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
@@ -126,19 +137,31 @@ public class frmCompile {
 			   compileInfo.lts=chckbxLts.isSelected();
 			   compileInfo.clts=chckbxClts.isSelected();
 			   compileInfo.compile=true;	
-				System.out.println("Compiling the file:"+filePath+"Storage type:"+(compileInfo.queue?"Queue":"Bag")
-						+(compileInfo.reduction?"with applying reduction":"without applying reduction"));
+			   compileInfo.max_thread_num=Integer.parseInt(txtMaxThread.getText());
+				System.out.println("Compiling the file: "+filePath+" Storage type: "+(compileInfo.queue?"Queue":"Bag")
+						+(compileInfo.reduction?" with applying reduction":" without applying reduction"));
 				
 				if(compileInfo.compile)
 				{
 					Translate trans=new Translate(filePath);
 					List<errorInfo> translationErrors=trans.doTranslatation();
-					DefaultTableModel listModel = (DefaultTableModel) errorlist.getModel();				
+					
+					DefaultTableModel listModel = (DefaultTableModel) errorlist.getModel();		
+					for(int i=0;i< listModel.getRowCount();i++)
+					{
+						listModel.removeRow(i);
+					}
 					for(errorInfo error:translationErrors)
 					{
 						listModel.addRow(new Object[]{error.getLine(),error.getDescrition()});
+						System.out.println("Translation was not successfull. To see more information please go to the output tab");
 					}
-					
+					if(translationErrors.size()==0)
+					{
+						mainWindow.getJMenuBar().getMenu(1).getMenuComponent(1).setEnabled(true);
+						mainWindow.getJMenuBar().getMenu(1).getMenuComponent(2).setEnabled(true);
+						System.out.println("Translation is successfully done");
+					}
 
 				}
 				frame.dispose();
@@ -149,6 +172,10 @@ public class frmCompile {
 		ButtonGroup group = new ButtonGroup();
 	    group.add(rdbtnQueue);
 	    group.add(rdbtnBag);
+		
+		txtMaxThread = new JFormattedTextField();
+		
+		JLabel lblNewLabel = new JLabel("Number of threads");
 
 	    
 
@@ -156,20 +183,26 @@ public class frmCompile {
 		gl_contentPane.setHorizontalGroup(
 			gl_contentPane.createParallelGroup(Alignment.LEADING)
 				.addGroup(gl_contentPane.createSequentialGroup()
-					.addGap(16)
+					.addContainerGap()
 					.addGroup(gl_contentPane.createParallelGroup(Alignment.TRAILING)
 						.addGroup(gl_contentPane.createSequentialGroup()
 							.addComponent(rdbtnBag)
-							.addContainerGap(221, Short.MAX_VALUE))
+							.addContainerGap(217, Short.MAX_VALUE))
 						.addGroup(gl_contentPane.createSequentialGroup()
 							.addGroup(gl_contentPane.createParallelGroup(Alignment.LEADING)
-								.addComponent(rdbtnQueue)
 								.addGroup(gl_contentPane.createSequentialGroup()
-									.addGap(21)
-									.addComponent(btnOk)))
+									.addGroup(gl_contentPane.createParallelGroup(Alignment.TRAILING)
+										.addGroup(gl_contentPane.createSequentialGroup()
+											.addComponent(btnOk)
+											.addGap(24))
+										.addComponent(lblNewLabel))
+									.addPreferredGap(ComponentPlacement.RELATED, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+									.addComponent(txtMaxThread, GroupLayout.PREFERRED_SIZE, 29, GroupLayout.PREFERRED_SIZE))
+								.addComponent(rdbtnQueue))
+							.addPreferredGap(ComponentPlacement.RELATED)
 							.addGroup(gl_contentPane.createParallelGroup(Alignment.LEADING)
 								.addGroup(gl_contentPane.createSequentialGroup()
-									.addPreferredGap(ComponentPlacement.RELATED, 59, Short.MAX_VALUE)
+									.addPreferredGap(ComponentPlacement.RELATED, 14, Short.MAX_VALUE)
 									.addComponent(btnCancel)
 									.addGap(30))
 								.addGroup(gl_contentPane.createSequentialGroup()
@@ -184,16 +217,19 @@ public class frmCompile {
 			gl_contentPane.createParallelGroup(Alignment.LEADING)
 				.addGroup(gl_contentPane.createSequentialGroup()
 					.addContainerGap()
-					.addComponent(rdbtnApplyReduction)
+					.addGroup(gl_contentPane.createParallelGroup(Alignment.BASELINE)
+						.addComponent(rdbtnApplyReduction)
+						.addComponent(lblNewLabel)
+						.addComponent(txtMaxThread, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE))
 					.addPreferredGap(ComponentPlacement.UNRELATED)
 					.addGroup(gl_contentPane.createParallelGroup(Alignment.BASELINE)
-						.addComponent(rdbtnQueue)
-						.addComponent(chckbxLts))
+						.addComponent(chckbxLts)
+						.addComponent(rdbtnQueue))
 					.addPreferredGap(ComponentPlacement.UNRELATED)
 					.addGroup(gl_contentPane.createParallelGroup(Alignment.BASELINE)
 						.addComponent(rdbtnBag)
 						.addComponent(chckbxClts))
-					.addPreferredGap(ComponentPlacement.RELATED, 5, Short.MAX_VALUE)
+					.addPreferredGap(ComponentPlacement.RELATED, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
 					.addGroup(gl_contentPane.createParallelGroup(Alignment.BASELINE)
 						.addComponent(btnOk)
 						.addComponent(btnCancel))
@@ -201,8 +237,4 @@ public class frmCompile {
 		);
 		contentPane.setLayout(gl_contentPane);
 	}
-
-
-
-
 }
