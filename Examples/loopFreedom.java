@@ -1,53 +1,39 @@
 //Invariant
-public Boolean loopFreedom(glState gl, Object[] pars)
+public Boolean loopFreedom(GlobalState gl, Object[] pars)
 {
 	boolean loop;
 
 	int src =0;
 	int[] seen = null;
-	if (pars != null)
-	{
-		int i = 0;
-		if (pars[i] != null) src = (int)pars[i];
-		i++;
-		if (pars[i] != null) seen = (int[])pars[i];
-	}
-
-	{
-
 		loop = false;
-
-
-
-		for (int id = 0; id < gl.getStates().size(); id++)
+	for (int id = 0; id < gl.getStates().size(); id++)
+	{
+		for (int des = 0; des < gl.getStates().size(); des++)
 		{
-			for (int des = 0; des < gl.getStates().size(); des++)
+
+
+			seen = new int[gl.getStates().size()];
+			for (int i = 0; i < gl.getStates().size(); i++)
 			{
-
-
-				seen = new int[gl.getStates().size()];
-				for (int i = 0; i < gl.getStates().size(); i++)
-				{
-					seen[i] = -1;
-				}
-				loop = looop(gl, des, id, 0, seen);
-				if (loop)
-					break;
+				seen[i] = -1;
 			}
+			loop = looop(gl, des, id, 0, seen);
 			if (loop)
 				break;
 		}
 		if (loop)
-		{
-			System.out.println("Loop is found!!!!!!!!!!!");
-			return true;
-		}
-		else
-			return false;
+			break;
 	}
+	if (loop)
+	{
+		System.out.println("Loop is found!!!!!!!!!!!");
+		return true;
+	}
+	else
+		return false;
 
 }
-boolean looop(glState gl, int des, int src, int indx, int[] seen)
+boolean looop(GlobalState gl, int des, int src, int indx, int[] seen)
 {
 
 	int nextHop = -1;
