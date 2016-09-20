@@ -110,6 +110,12 @@ public class Topology {
 		}
 
 	}
+        
+        public void clear(){
+            for (int i = 0; i < rebecs_count; i++) {
+                    connections[i].clear();
+            }
+        }
 
 	// public void get_all()
 	// {

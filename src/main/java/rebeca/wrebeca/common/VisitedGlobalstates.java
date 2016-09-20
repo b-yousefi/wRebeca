@@ -4,15 +4,14 @@ package rebeca.wrebeca.common;
  * @author Behnaz Yousefi
  *
  */
-import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class VisitedGlobalstates {
-
+  
     private static VisitedGlobalstates instance;
-    private Map<GlobalState, Integer> visited;
-    private ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
+    private final Map<GlobalState, Integer> visited;
+ //   private final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
     private Integer state_number;
 
     public GlobalState getGlState(int stNum) {
@@ -26,7 +25,7 @@ public class VisitedGlobalstates {
     }
 
     private VisitedGlobalstates() {
-        visited = new HashMap<GlobalState, Integer>();
+        visited = new ConcurrentHashMap<>();
         state_number = 0;
     }
 
@@ -43,12 +42,7 @@ public class VisitedGlobalstates {
 
     public Integer get_stNumber(GlobalState gl) {
         Integer stNumber = -1;
-        rwl.readLock().lock();
-        try {
-            stNumber = visited.get(gl);
-        } finally {
-            rwl.readLock().unlock();
-        }
+        stNumber = visited.get(gl);
         if (stNumber == null) {
             stNumber = -1;
         }
@@ -57,22 +51,13 @@ public class VisitedGlobalstates {
 
     public Integer insert(GlobalState gl) {
         Integer stNum = -1;
-
-        rwl.writeLock().lock();
-        try {
             stNum = get_stNumber(gl);
             if (stNum == -1) {
-                GlobalState gll = gl.deepCopy();
-                if (visited.put(gll, state_number) == null) {
-                    stNum = state_number;
-                    state_number++;
-                } else {
-                    stNum = state_number;
-                }
+               // GlobalState gll = gl.deepCopy();
+                visited.put(gl, state_number);
+                stNum = state_number;
+                state_number++;
             }
-        } finally {
-            rwl.writeLock().unlock();
-        }
         return stNum;
     }
 
