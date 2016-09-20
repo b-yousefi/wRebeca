@@ -4,13 +4,15 @@ package rebeca.wrebeca.common;
  * @author Behnaz Yousefi
  *
  */
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class VisitedGlobalstates {
 
     private static VisitedGlobalstates instance;
-    private final Map<GlobalState, Integer> visited;
+    private Map<GlobalState, Integer> visited;
+    private ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
     private Integer state_number;
 
     public GlobalState getGlState(int stNum) {
@@ -24,7 +26,7 @@ public class VisitedGlobalstates {
     }
 
     private VisitedGlobalstates() {
-        visited = new ConcurrentHashMap<>();
+        visited = new HashMap<GlobalState, Integer>();
         state_number = 0;
     }
 
@@ -41,7 +43,12 @@ public class VisitedGlobalstates {
 
     public Integer get_stNumber(GlobalState gl) {
         Integer stNumber = -1;
-        stNumber = visited.get(gl);
+        rwl.readLock().lock();
+        try {
+            stNumber = visited.get(gl);
+        } finally {
+            rwl.readLock().unlock();
+        }
         if (stNumber == null) {
             stNumber = -1;
         }
@@ -50,11 +57,21 @@ public class VisitedGlobalstates {
 
     public Integer insert(GlobalState gl) {
         Integer stNum = -1;
-        stNum = get_stNumber(gl);
-        if (stNum == -1) {
-            visited.put(gl, state_number);
-            stNum = state_number;
-            state_number++;
+
+        rwl.writeLock().lock();
+        try {
+            stNum = get_stNumber(gl);
+            if (stNum == -1) {
+                GlobalState gll = gl.deepCopy();
+                if (visited.put(gll, state_number) == null) {
+                    stNum = state_number;
+                    state_number++;
+                } else {
+                    stNum = state_number;
+                }
+            }
+        } finally {
+            rwl.writeLock().unlock();
         }
         return stNum;
     }

@@ -1,10 +1,14 @@
 package rebeca.wrebeca.common;
-
 /**
  * @author Behnaz Yousefi
  *
  */
-public interface IMethodArgs extends Comparable<IMethodArgs>, Cloneable {
+public interface IMethodArgs extends Comparable<IMethodArgs> {
+	public int compareTo(IMethodArgs msg1);
 
-    public IMethodArgs deepCopy();
+	public int hashCode();
+
+	public boolean equals(Object obj);
+
+	public IMethodArgs deepCopy();
 }
