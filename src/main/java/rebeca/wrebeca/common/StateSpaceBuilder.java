@@ -14,6 +14,8 @@ import java.util.TimerTask;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import rebeca.wrebeca.common.topologyConstraint.Topology;
 import rebeca.wrebeca.dynamicNetwork.glStateDynamicWithTau;
@@ -107,15 +109,15 @@ public class StateSpaceBuilder {
 
                     if ((st_des) == -1) {
                         st_des = VisitedGlobalstates.getInstance().insert(temp);
-                        Trans.add_st(st_des);
-                        Trans lb = new Trans(st_des, label);
-                        lb.add_transition(st_source);
+                        Trans.getInstance().add_transition(st_source,st_des,label);
                         if (temp.hasAnyInitMessage()) {
                             init(temp, initTopls);
                         } else if (!gradually) {
                             allInitializedState = st_des;
                             put_work(temp);
                         }
+                    } else {
+                        Trans.getInstance().add_transition(st_source,st_des,label);
                     }
                 }
             }
@@ -127,20 +129,19 @@ public class StateSpaceBuilder {
         // Output output_builder = new Output();
         if (mcrl) {
             try {
-                Trans.write_mcrl2(VisitedGlobalstates.getInstance(), allInitializedState);
+                Trans.getInstance().write_mcrl2(VisitedGlobalstates.getInstance(), allInitializedState);
             } catch (IOException e1) {
             }
         }
         if (lts) {
             try {
-                Trans.write_aut(false);
+                Trans.getInstance().write_aut(false);
             } catch (IOException e) {
                 // TODO Auto-generated catch block
             }
         }
         timer.cancel();
         System.exit(0);
-        // return VisitedGlobalstates.getInstance().size();
     }
 
     public Map<State, List<Message>> message_handler(State st, Message m, int top) {
@@ -187,17 +188,14 @@ public class StateSpaceBuilder {
             if (states.getClass() == glStateDynamicWithTau.class) {
                 int st_des = VisitedGlobalstates.getInstance().get_stNumber(temp);
                 if ((st_des) == -1) {
-                    st_des = VisitedGlobalstates.getInstance().insert(temp);
-                    Trans.add_st(st_des);
-                    Trans lb = new Trans(st_des, "tau");
-                    lb.add_transition(st_source);
+                    st_des = VisitedGlobalstates.getInstance().insert(temp);                    
+                    Trans.getInstance().add_transition(st_source,st_des,"tau");
                     put_work(temp);
 
                 } else if (temp.getTop() == states.getTop()) {
                     createNewFork(temp, st_source);
                 } else {
-                    Trans lb = new Trans(st_des, "tau");
-                    lb.add_transition(st_source);
+                    Trans.getInstance().add_transition(st_source,st_des,"tau");
                 }
 
             } else {

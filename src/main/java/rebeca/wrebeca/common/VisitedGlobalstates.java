@@ -11,7 +11,6 @@ public class VisitedGlobalstates {
   
     private static VisitedGlobalstates instance;
     private final Map<GlobalState, Integer> visited;
- //   private final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
     private Integer state_number;
 
     public GlobalState getGlState(int stNum) {
@@ -51,13 +50,15 @@ public class VisitedGlobalstates {
 
     public Integer insert(GlobalState gl) {
         Integer stNum = -1;
+        synchronized(visited){
             stNum = get_stNumber(gl);
             if (stNum == -1) {
-               // GlobalState gll = gl.deepCopy();
                 visited.put(gl, state_number);
+                Trans.getInstance().add_st(state_number);
                 stNum = state_number;
                 state_number++;
             }
+        }
         return stNum;
     }
 

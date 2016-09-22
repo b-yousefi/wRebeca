@@ -4,7 +4,6 @@ package rebeca.wrebeca.common;
  * @author Behnaz Yousefi
  *
  */
-import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
@@ -44,15 +43,12 @@ public class GlobalStateHandler implements Runnable {
 
                             if ((st_des) == -1) {
                                 st_des = VisitedGlobalstates.getInstance().insert(temp);
-                                Trans.add_st(st_des);
-                                Trans lb = new Trans(st_des, label);
-                                lb.add_transition(st_source);
+                                Trans.getInstance().add_transition(st_source,st_des,label);
                                 if (!StateSpaceBuilder.getInstance().gradually && check_invariants(temp)) {
                                     StateSpaceBuilder.getInstance().put_work(temp);
                                 }
                             } else {
-                                Trans lb = new Trans(st_des, label);
-                                lb.add_transition(st_source);
+                                Trans.getInstance().add_transition(st_source,st_des,label);
                             }
                         }
                     }
@@ -73,7 +69,7 @@ public class GlobalStateHandler implements Runnable {
                     if ((boolean) var) {
                         holds = false;
                         StateSpaceBuilder.getInstance().setStop();
-                        Trans.printCounterExample(gl, st_source);
+                        Trans.getInstance().printCounterExample(gl, st_source);
                         StateSpaceBuilder.getInstance().complete_building();
                         break;
 

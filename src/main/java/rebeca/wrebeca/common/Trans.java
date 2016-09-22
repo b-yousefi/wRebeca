@@ -15,45 +15,55 @@ import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class Trans {
 
-    private static Map<Integer, HashSet<Trans>> transitions;
-    private final Object lock_tr = new Object();
-   // private final static Object lock_trPut = new Object();
-    private static List<String> selectedFields;
-    static int numCounterExamples = 0;
-    // int stNum;
-    private static String outputPath;
+    private final static Map<Integer, HashSet<Trans>> transitions;
+    private  List<String> selectedFields;
+    private  final static AtomicInteger  numCounterExamples;
+    private  String outputPath;
+    private static Trans instance;
 
-    public static synchronized void incCounter() {
-        numCounterExamples++;
+    private Trans(int des_, String label_) {
+        stateNum = des_;
+        label = label_;   
     }
-
-    public static void setOutputPath(String modelerPath) {
+    
+    private Trans(){
+ 
+    }
+    
+    static {
+        transitions = new ConcurrentHashMap<>();
+        numCounterExamples = new AtomicInteger(0);   
+    }
+    
+    public static Trans getInstance(){
+        if (instance == null) {
+            instance = new Trans();
+        }
+        return instance;
+    }
+    
+    public  void setOutputPath(String modelerPath) {
         outputPath = modelerPath;
     }
 
-    static {
-        transitions = new ConcurrentHashMap<>();
-
-    }
-
-    public static Map<Integer, HashSet<Trans>> getTransitions() {
+    public  Map<Integer, HashSet<Trans>> getTransitions() {
         return transitions;
     }
 
-    public static int getNumOfStates() {
+    public  int getNumOfStates() {
         return transitions.keySet().size();
     }
 
-    public static int getNumOfTransitions() {
+    public  int getNumOfTransitions() {
         int sum = 0;
         for (Integer source : transitions.keySet()) {
             sum += transitions.get(source).size();
@@ -61,20 +71,19 @@ public class Trans {
         return sum;
     }
 
-    public Boolean add_transition(int source) {
-
-        if (!transitions.containsKey(source)) {
-            add_st(source);
-        }
-        if (transitions.get(source).contains(this)) {
-            return true;
-        } else {
-            transitions.get(source).add(this);
-            return false;
+    public Boolean add_transition(int source, int dest, String label) {
+        Trans tr= new Trans(dest, label);
+        synchronized(transitions){
+            if (transitions.get(source).contains(tr)) {
+                return true;
+            } else {
+                transitions.get(source).add(tr);
+                return false;
+            }
         }
     }
 
-    public static void printCounterExample(GlobalState gl, int stNum) {
+    public void printCounterExample(GlobalState gl, int stNum) {
         StringBuffer str = new StringBuffer();
         createCounterExample(gl, stNum, str, new HashSet<>());
 
@@ -82,7 +91,7 @@ public class Trans {
 
     static int numCounters = 0;
 
-    private static void createCounterExample(GlobalState gl, int stNum, StringBuffer str, HashSet<Integer> visited) {
+    private void createCounterExample(GlobalState gl, int stNum, StringBuffer str, HashSet<Integer> visited) {
         List<Integer> sources = transitions.keySet().stream()
                 .filter(i -> transitions.get(i).stream().anyMatch(x -> x.stateNum == stNum))
                 .collect(Collectors.toList());
@@ -96,9 +105,9 @@ public class Trans {
             str2.append("\n");
             if (s == 0) {
                 try {
-                    Trans.incCounter();
+                    numCounterExamples.getAndIncrement();
                     try ( 
-                            FileWriter writerp = new FileWriter(outputPath + "/Output/invariant" + Trans.getNumCounterExamples() + ".txt", true)) {
+                            FileWriter writerp = new FileWriter(outputPath + "/Output/invariant" + numCounterExamples.get() + ".txt", true)) {
                         writerp.write(str2.toString());
 
                     }
@@ -114,22 +123,12 @@ public class Trans {
         }
     }
 
-    public static void add_st(int source) {
-        if (!transitions.containsKey(source)) {
-            transitions.put(source, new HashSet<>());
-        }
+    public  void add_st(int source) {
+        transitions.putIfAbsent(source, new HashSet<>());
     }
 
     public int stateNum;
     String label;
-
-    public Trans(int des_, String label_) {
-        stateNum = des_;
-        label = label_;
-    }
-
-    public Trans() {
-    }
 
     public int getStateNum() {
         return stateNum;
@@ -178,13 +177,13 @@ public class Trans {
         return stateNum == other.stateNum;
     }
 
-    public static void write_aut(boolean forMcrl) throws IOException {
+    public void write_aut(boolean forMcrl) throws IOException {
         try (FileWriter writer = new FileWriter(outputPath + "/Output/state_space.aut")) {
-            String str = "des ( 0" + " ," + Trans.getNumOfTransitions() + " ," + Trans.getNumOfStates() + " )";
+            String str = "des ( 0" + " ," + getNumOfTransitions() + " ," + getNumOfStates() + " )";
             writer.write(str);
             writer.write("\n");
-            for (int source : Trans.getTransitions().keySet()) {
-                for (Trans item : Trans.getTransitions().get(source)) {
+            for (int source : getTransitions().keySet()) {
+                for (Trans item : getTransitions().get(source)) {
                     if (!forMcrl) {
                         str = "( " + source + " , \"" + item.getLabel() + "\" ," + item.getStateNum() + " )";
                     } else {
@@ -198,23 +197,23 @@ public class Trans {
             // TODO Auto-generated catch block
         }
     }
-    private static int numOfInfo_transitions = 0;
+    private  int numOfInfo_transitions = 0;
 
     @SuppressWarnings("resource")
-    public static void write_mcrl2(VisitedGlobalstates hash, int allInitializedState) throws IOException {
+    public  void write_mcrl2(VisitedGlobalstates hash, int allInitializedState) throws IOException {
         if (Files.exists(Paths.get(outputPath + "/Output/state_space.mcrl2"))) {
             Files.delete(Paths.get(outputPath + "/Output/state_space.mcrl2"));
         }
         //	write_file(acts, outputPath + "/Output/state_space.mcrl2");
         write_aut(true);
         FileWriter writer = new FileWriter(outputPath + "/Output/state_space.aut", true);
-        for (int source : Trans.getTransitions().keySet()) {
+        for (int source : getTransitions().keySet()) {
             writer.write(glStateInfoTostring(source, hash));
         }
         writer.close();
         BufferedReader reader = new BufferedReader(new FileReader((outputPath + "/Output/state_space.aut")));
         String line;
-        String str = "des ( 0" + " ," + (Trans.getNumOfTransitions() + numOfInfo_transitions) + " ," + Trans.getNumOfStates() + " )";
+        String str = "des ( 0" + " ," + (getNumOfTransitions() + numOfInfo_transitions) + " ," + getNumOfStates() + " )";
         writer = new FileWriter(outputPath + "/Output/stateSpaceMcrl.aut");
         writer.write(str + "\n");
         reader.readLine();
@@ -224,8 +223,8 @@ public class Trans {
         writer.close();
     }
 
-    private static String glStateInfoTostring(int stNum, VisitedGlobalstates hash) {
-        System.out.println(Trans.getNumOfStates());
+    private  String glStateInfoTostring(int stNum, VisitedGlobalstates hash) {
+        System.out.println(getNumOfStates());
         StringBuilder str = new StringBuilder();
         Class<? extends State> rebec_type;
         Field[] prop_s;
@@ -302,7 +301,7 @@ public class Trans {
         return str.toString();
     }
 
-    private static String arrayObjectToString(Object obj) {
+    private String arrayObjectToString(Object obj) {
         String arrayStr = "";
         try {
 
@@ -315,14 +314,14 @@ public class Trans {
         return arrayStr;
     }
 
-    private static void write_file(String str, String path) throws IOException {
+    private void write_file(String str, String path) throws IOException {
         try (FileWriter writerp = new FileWriter(path, true)) {
             writerp.write(str);
         }
     }
 
     @SuppressWarnings("unused")
-    private static String write_action(VisitedGlobalstates hash, int allInitializedState) throws IOException {
+    private String write_action(VisitedGlobalstates hash, int allInitializedState) throws IOException {
         String actions = "act \n changeTop;\n";
 
         Field[] prop_s;
@@ -452,19 +451,15 @@ public class Trans {
         return acts;
     }
 
-    public static List<String> getSelectedFields() {
+    public List<String> getSelectedFields() {
         return selectedFields;
     }
 
-    public static void setSelectedFields(List<String> selectedFields) {
-        Trans.selectedFields = selectedFields;
+    public void setSelectedFields(List<String> selectedFields) {
+        selectedFields = selectedFields;
     }
 
-    public static String getOutputPath() {
+    public  String getOutputPath() {
         return outputPath;
-    }
-
-    public synchronized static int getNumCounterExamples() {
-        return numCounterExamples;
     }
 }
