@@ -142,7 +142,7 @@ public class frmCompile {
                 compileInfo.lts = chckbxLts.isSelected();
                 compileInfo.clts = chckbxClts.isSelected();
                 compileInfo.compile = true;
-                compileInfo.max_thread_num = Integer.parseInt(txtMaxThread.getText());
+                compileInfo.max_thread_num = !txtMaxThread.getText().isEmpty()?Integer.parseInt(txtMaxThread.getText()):0;
                 System.out.println("Compiling the file: " + filePath + " Storage type: " + (compileInfo.queue ? "Queue" : "Bag")
                         + (compileInfo.reduction ? " with applying reduction" : " without applying reduction"));
 

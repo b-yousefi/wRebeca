@@ -40,7 +40,7 @@ public class StateSpaceBuilder {
         actl = actl_;
         mcrl = mcrl_;
         lts = lts_;
-        pool = new ThreadPoolExecutor(20, 200, 2L, TimeUnit.DAYS, new ArrayBlockingQueue<>(1000000));
+        pool = new ThreadPoolExecutor(max_thread/2, max_thread!=0?max_thread:200, 2L, TimeUnit.DAYS, new ArrayBlockingQueue<>(1000000));
         timer = new Timer();
 
         
