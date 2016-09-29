@@ -14,8 +14,6 @@ import java.util.TimerTask;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import rebeca.wrebeca.common.topologyConstraint.Topology;
 import rebeca.wrebeca.dynamicNetwork.glStateDynamicWithTau;
@@ -44,6 +42,17 @@ public class StateSpaceBuilder {
         lts = lts_;
         pool = new ThreadPoolExecutor(20, 200, 2L, TimeUnit.DAYS, new ArrayBlockingQueue<>(1000000));
         timer = new Timer();
+
+        
+        instance=this;
+    }
+
+    static {
+        INVARIANTS = new ArrayList<>();
+    }
+
+    public void Initialize(GlobalState gl, boolean defaultTop)
+            throws IOException {
         TimerTask printNumStates = new TimerTask() {
             @Override
             public void run() {
@@ -55,15 +64,6 @@ public class StateSpaceBuilder {
             }
         };
         timer.schedule(printNumStates, 2000, 4 * 1000);
-        instance=this;
-    }
-
-    static {
-        INVARIANTS = new ArrayList<>();
-    }
-
-    public void Initialize(GlobalState gl, rebeca.wrebeca.common.topologyConstraint.Topology topls, boolean defaultTop)
-            throws IOException {
         if (defaultTop) {
             VisitedGlobalstates.getInstance().insert(gl);
             List<Integer> tops = new ArrayList<>();
@@ -208,7 +208,7 @@ public class StateSpaceBuilder {
         if(!stopped){
             GlobalStateHandler th = new GlobalStateHandler(gl, source);
             pool.execute(th);
-            th.run();
+            //th.run();
         }
 
     }

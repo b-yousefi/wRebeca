@@ -447,7 +447,6 @@ public class Trans {
         acts = acts.substring(0, acts.length() - 1);
         acts += "},S0);";
         write_file(actions, outputPath + "\\Output\\state_space.mcrl2");
-        //write_file("proc", outputPath + "\\Output\\state_space.mcrl2");
         return acts;
     }
 

@@ -39,6 +39,12 @@ public class Topology {
 		}
 	}
 
+    public Topology(int rebec_count_, Topology start) {
+        rebecs_count = rebec_count_;
+        topologies = new HashMap<>();
+	topologies.put(0, start);
+    }
+
 	public String connectionInfo(Integer stID, List<Integer> recievers) {
 		String str = "{";
 		for (Integer i = 0; i < rebecs_count; i++) {
@@ -80,7 +86,7 @@ public class Topology {
 	}
 
 	public List<Integer> getNeighbors(int index) {
-		List<Integer> neighbors = new ArrayList<Integer>();
+		List<Integer> neighbors = new ArrayList<>();
 		for (int i = 0; i < Topology.getRebecs_count(); i++) {
 			if (this.getConnections(index).get(i))
 				neighbors.add(i);
@@ -162,11 +168,9 @@ public class Topology {
 		if (getClass() != obj.getClass())
 			return false;
 		Topology other = (Topology) obj;
-		if (!Arrays.equals(connections, other.connections))
-			return false;
-		// if (rebecs_count != Topology.rebecs_count)
-		// return false;
-		return true;
+            // if (rebecs_count != Topology.rebecs_count)
+            // return false;
+            	return Arrays.equals(connections, other.connections);
 	}
 
 	public boolean connected(int rebec1, int rebec2) {

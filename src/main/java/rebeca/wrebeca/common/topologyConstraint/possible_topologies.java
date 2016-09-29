@@ -11,7 +11,7 @@ import java.util.List;
 
 public class possible_topologies extends ChangeTopologies {
 
-    private static HashSet<Topology> final_tops = new HashSet<>();
+    private static final HashSet<Topology> final_tops = new HashSet<>();
     private static List<Integer> set_cons;
     private static Topology consts;
     private static int rebecs_count;
@@ -66,7 +66,7 @@ public class possible_topologies extends ChangeTopologies {
         for (int i = 0; i < rebecs_count; i++) {
             for (int j = i + 1; j < rebecs_count; j++) {
                 if (!possible_topologies.set_cons.contains(i * rebecs_count + j)) {
-                    HashSet<Topology> temp = new HashSet<Topology>();
+                    HashSet<Topology> temp = new HashSet<>();
 
                     for (Topology top : final_tops) {
                         Topology tempTop = new Topology(top);

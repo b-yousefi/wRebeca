@@ -52,8 +52,7 @@ public class Message implements Comparable<Message>, Cloneable {
         result = prime * result + ((methodID == null) ? 0 : methodID.hashCode());
         result = prime * result + ((msgArgs == null) ? 0 : msgArgs.hashCode());
 //        result = prime * result + ((recID == null) ? 0 : recID.hashCode());
-//        result = prime * result + ((senderID == null) ? 0 :
-//        senderID.hashCode());
+      //  result = prime * result + ((senderID == null) ? 0 : senderID.hashCode());
         return result;
     }
 
@@ -88,11 +87,11 @@ public class Message implements Comparable<Message>, Cloneable {
         // return false;
         // } else if (!recID.equals(other.recID))
         // return false;
-        // if (senderID == null) {
-        // if (other.senderID != null)
-        // return false;
-        // } else if (!senderID.equals(other.senderID))
-        // return false;
+//         if (senderID == null) {
+//         if (other.senderID != null)
+//         return false;
+//         } else if (!senderID.equals(other.senderID))
+//         return false;
         return true;
     }
 
@@ -162,12 +161,8 @@ public class Message implements Comparable<Message>, Cloneable {
         // res = other.recID.containsAll(this.recID)?1:0;
         // if (res != 0) return res;
         // }
-        // res = msg1.senderID.CompareTo(this.senderID);
-        // if (res != 0) return res;
-        res = other.methodID.compareTo(this.methodID);
-        if (res != 0) {
-            return res;
-        }
+//        res = other.senderID.compareTo(this.senderID);
+//        if (res != 0) return res;
 
         res = other.msgArgs.compareTo(this.msgArgs);
         if (res != 0) {
