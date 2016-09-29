@@ -1,0 +1,48 @@
+reactiveclass Node()
+{   
+    statevars
+    {    
+         boolean destination;
+    }
+    
+    msgsrv initial(boolean starter,boolean dest)
+    {   
+        destination=dest;
+        if(starter==true)
+        {
+            relay_packet(55,1);
+		}
+    }
+    
+    
+    msgsrv relay_packet(int data,int hopNum)
+    {
+    	
+        if(destination==true)
+        {       	
+            unicast(self,deliver_packet(data));
+        }
+        else{ 
+            if(hopNum<2)
+            {              
+                hopNum++;
+                relay_packet(data,hopNum);
+            }   
+        }
+    }
+    msgsrv deliver_packet(int data)
+    {
+        
+    }
+}
+
+
+main
+{
+    Node node0(node1,node2,node3,node4,node5):(true,false);
+    Node node1(node0,node2,node3,node4,node5):(false,false);
+	Node node2(node0,node1,node3,node4,node5):(false,true);
+    Node node3(node0,node1,node2,node4,node5):(false,false);
+	Node node4(node0,node1,node2,node3,node5):(false,false);
+	Node node5(node0,node1,node2,node3,node4):(false,false);
+}

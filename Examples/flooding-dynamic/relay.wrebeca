@@ -1,0 +1,52 @@
+reactiveclass Node()
+{   
+    statevars
+    {    
+        int IP;
+    }
+    
+    msgsrv initial (boolean source, int ip_)
+    {   
+        IP = ip_;
+        if (source == true)
+        {
+            relay_packet(55, 1, 3);
+        }
+    }
+    
+    msgsrv relay_packet(int data, int hopNum, int destination)
+    {
+        if (IP == destination)
+        {
+            unicast(self,deliver_packet(data));
+        }
+        else{ 
+            if(hopNum<3)
+            {
+                hopNum++;
+                relay_packet(data, hopNum, destination);
+            }   
+        }
+    }
+    msgsrv deliver_packet(int data)
+    {
+        
+    }
+}
+
+main
+{  
+    Node node0(node1,node3):(true,0);
+    Node node1(node0,node3):(false,1);
+    Node node2(node3):(false,2);
+    Node node3(node0,node2,node1):(false,3);
+	
+    constraints
+    {
+		//con(node0,node1)
+       //and(con(node0,node1), con(node2,node3)) 
+       // and(and(con(node0,node1),con(node0,node3)), con(node2,node3))
+       and(and(con(node0,node1), con(node2,node3)),and(con(node0,node3), con(node1,node3))) 
+    }
+
+}
