@@ -1,0 +1,4 @@
+*.netbeans_automatic_build
+*.class
+target/classes/Translator-1.0-SNAPSHOT.jar
+target/wRebeca-1.0-SNAPSHOT.jar

@@ -97,7 +97,7 @@ public class frmCompile {
             }
         });
 
-        return compileInfo.compile;
+        return compileInfo.getInstance().isCompile();
     }
 
     /**
@@ -124,7 +124,7 @@ public class frmCompile {
         btnCancel = new JButton("Cancel");
         btnCancel.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                compileInfo.compile = false;
+                compileInfo.getInstance().setCompile(false);
                 frame.dispose();
                 frame.setVisible(false);
             }
@@ -136,19 +136,19 @@ public class frmCompile {
         btnOk = new JButton("Ok");
         btnOk.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                compileInfo.queue = rdbtnQueue.isSelected();
-                compileInfo.bag = rdbtnBag.isSelected();
-                compileInfo.reduction = rdbtnApplyReduction.isSelected();
-                compileInfo.lts = chckbxLts.isSelected();
-                compileInfo.clts = chckbxClts.isSelected();
-                compileInfo.compile = true;
-                compileInfo.max_thread_num = !txtMaxThread.getText().isEmpty()?Integer.parseInt(txtMaxThread.getText()):0;
-                System.out.println("Compiling the file: " + filePath + " Storage type: " + (compileInfo.queue ? "Queue" : "Bag")
-                        + (compileInfo.reduction ? " with applying reduction" : " without applying reduction"));
+                compileInfo.getInstance().setQueue (rdbtnQueue.isSelected());
+                compileInfo.getInstance().setBag(rdbtnBag.isSelected());
+                compileInfo.getInstance().setReduction(rdbtnApplyReduction.isSelected());
+                compileInfo.getInstance().setLts(chckbxLts.isSelected());
+                compileInfo.getInstance().setClts(chckbxClts.isSelected());
+                compileInfo.getInstance().setCompile(true);
+                compileInfo.getInstance().setMax_thread_num(!txtMaxThread.getText().isEmpty()?Integer.parseInt(txtMaxThread.getText()):0);
+                System.out.println("Compiling the file: " + filePath + " Storage type: " + (compileInfo.getInstance().isQueue() ? "Queue" : "Bag")
+                        + (compileInfo.getInstance().reduction ? " with applying reduction" : " without applying reduction"));
 
-                if (compileInfo.compile) {
+                if (compileInfo.getInstance().isCompile()) {
                     Translate trans = new Translate(filePath);
-                    List<errorInfo> translationErrors = trans.doTranslatation();
+                    List<errorInfo> translationErrors = trans.doTranslatation(compileInfo.getInstance());
 
                     DefaultTableModel listModel = (DefaultTableModel) errorlist.getModel();
                     for (int i = 0; i < listModel.getRowCount(); i++) {

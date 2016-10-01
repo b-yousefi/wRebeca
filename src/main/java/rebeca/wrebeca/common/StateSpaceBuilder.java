@@ -53,17 +53,6 @@ public class StateSpaceBuilder {
 
     public void Initialize(GlobalState gl, boolean defaultTop)
             throws IOException {
-        TimerTask printNumStates = new TimerTask() {
-            @Override
-            public void run() {
-                System.out.println("number of reached states: " + VisitedGlobalstates.getInstance().size().toString());
-                if(isTerminated()){
-                    complete_building();
-                    timer.cancel();
-                }
-            }
-        };
-        timer.schedule(printNumStates, 2000, 4 * 1000);
         if (defaultTop) {
             VisitedGlobalstates.getInstance().insert(gl);
             List<Integer> tops = new ArrayList<>();
@@ -76,7 +65,17 @@ public class StateSpaceBuilder {
             tops.addAll(Topology.topologies.keySet());
             init(gl, tops);
         }
-
+        TimerTask printNumStates = new TimerTask() {
+            @Override
+            public void run() {
+                System.out.println("number of reached states: " + VisitedGlobalstates.getInstance().size().toString());
+                if(isTerminated()){
+                    complete_building();
+                    timer.cancel();
+                }
+            }
+        };
+        timer.schedule(printNumStates, 4000, 4 * 1000);
     }
 
     public void init(GlobalState gl, List<Integer> initTopls) throws IOException {

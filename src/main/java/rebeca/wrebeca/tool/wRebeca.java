@@ -119,8 +119,9 @@ public class wRebeca {
             File modelerFile = new File(inputDirctory + "//" + pkgName + "//modeler.java");
             String changedModeler = FileToString(modelerFile);
 
-            String stateSpaceConfig = "super(" + compileInfo.clts + "," + compileInfo.mcrl + "," + compileInfo.lts
-                    + "," + compileInfo.max_thread_num + ");";
+            String stateSpaceConfig = "super(" + compileInfo.getInstance().isClts() + "," +
+                    compileInfo.getInstance().isMcrl() + "," + compileInfo.getInstance().isLts()
+                    + "," + compileInfo.getInstance().getMax_thread_num() + ");";
             System.out.println(stateSpaceConfig);
             changedModeler = changedModeler.replace("super(false,false,true,4);", stateSpaceConfig);
 
@@ -146,8 +147,8 @@ public class wRebeca {
                 if (compilationResult == 0) {
                     System.out.println("Compilation is successful");
                     System.out.println("state space creation is started with the following configuration:");
-                    System.out.println("Storage type: " + (compileInfo.queue ? "Queue" : "Bag") + " "
-                            + (compileInfo.reduction ? " with applying reduction" : " without applying reduction"));
+                    System.out.println("Storage type: " + (compileInfo.getInstance().isQueue() ? "Queue" : "Bag") + " "
+                            + (compileInfo.getInstance().isReduction() ? " with applying reduction" : " without applying reduction"));
                     try {
                         System.out.println("Start creating the state space");
                         // System.out.println(System.getProperty("java.class.path"));
@@ -235,9 +236,9 @@ public class wRebeca {
                         textArea.read(inputReader, null);
                         List<String> codeLines = Files.readAllLines(inputFile.toPath());
                         if (inputFile.toString().matches(".*.wrebeca")) {
-                            compileInfo.dynamic = true;
+                            compileInfo.getInstance().setDynamic(true);
                         } else {
-                            compileInfo.dynamic = false;
+                            compileInfo.getInstance().setDynamic(false);
                         }
                         DefaultMutableTreeNode r = createCodeTree(codeLines);
                         DefaultTreeModel treeModel = (DefaultTreeModel) trSource.getModel();
@@ -335,11 +336,11 @@ public class wRebeca {
         mntmCreateStateSpace.setEnabled(false);
         mntmCreateStateSpace.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                if (compileInfo.mcrl) {
-                    if (!compileInfo.clts) {
-                        compileInfo.lts = true;
+                if (compileInfo.getInstance().isMcrl()) {
+                    if (!compileInfo.getInstance().isClts()) {
+                        compileInfo.getInstance().setLts(true);
                     }
-                    compileInfo.mcrl = false;
+                    compileInfo.getInstance().setMcrl(false);
                 }
                 create_stateSpace();
             }
@@ -353,8 +354,8 @@ public class wRebeca {
         mntmInvariant.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 load_invariant();
-                compileInfo.mcrl = false;
-                compileInfo.lts = true;
+                compileInfo.getInstance().setMcrl(false);
+                compileInfo.getInstance().setLts(true);
                 create_stateSpace();
             }
         });
@@ -363,8 +364,8 @@ public class wRebeca {
         JMenuItem mntmMcrl = new JMenuItem("mcrl");
         mntmMcrl.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                compileInfo.mcrl = true;
-                compileInfo.lts = false;
+                compileInfo.getInstance().setMcrl(true);
+                compileInfo.getInstance().setLts(false);
                 String pkgName = inputFile.getName().toString().split("\\.")[0];
                 String inputDirctory = inputFile.getParentFile().toString();
 
