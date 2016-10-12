@@ -14,6 +14,7 @@ public class compileInfo {
             lts = true;
             mcrl=false;
             dynamic=true ;
+            classic=false;
             max_thread_num=4;
         }
         
@@ -85,6 +86,7 @@ public class compileInfo {
 
     public void setDynamic(boolean dynamic) {
         this.dynamic = dynamic;
+        this.classic = false;
     }
 
     public int getMax_thread_num() {
@@ -93,6 +95,15 @@ public class compileInfo {
 
     public void setMax_thread_num(int max_thread_num) {
         this.max_thread_num = max_thread_num;
+    }
+    
+    public boolean isClassic(){
+        return classic;
+    }
+    
+    public void setClassic(boolean classic){
+        this.classic = classic;
+        this.dynamic = false;
     }
         //public static boolean with_tau=false;
         private  boolean compile;
@@ -104,5 +115,6 @@ public class compileInfo {
         private  boolean mcrl;
         private  boolean dynamic;
         private  int max_thread_num;
+        private boolean classic;
         
 }

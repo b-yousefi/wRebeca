@@ -17,6 +17,7 @@ import java.util.concurrent.TimeUnit;
 
 import rebeca.wrebeca.common.topologyConstraint.Topology;
 import rebeca.wrebeca.dynamicNetwork.glStateDynamicWithTau;
+import rebeca.wrebeca.staticNetwork.StateStatic;
 
 public class StateSpaceBuilder {
 
@@ -153,10 +154,10 @@ public class StateSpaceBuilder {
 
     public String labelBuilder(State current_st, int top, Message msg) {
         String label;
-        if (Topology.topologies.size() != 1) {
-            label = current_st.getId() + ":" + msg.getMethodID() + "(";
-        } else {
+        if (current_st instanceof StateStatic) {
             label = msg.getMethodID() + "(";
+        } else {
+            label = current_st.getId() + ":" + msg.getMethodID() + "(";
         }
         label += msg.getMsgArgs().toString() + " )";
         if (actl) {
