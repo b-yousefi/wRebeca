@@ -40,6 +40,7 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.text.BadLocationException;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
+import static javax.tools.ToolProvider.getSystemJavaCompiler;
 
 import rebeca.wrebeca.common.*;
 import rebeca.wrebeca.dynamicNetwork.*;
@@ -103,8 +104,9 @@ public class wRebeca {
         if (inputFile != null) {
             String pkgName = inputFile.getName().toString().split("\\.")[0];
             String inputDirctory = inputFile.getParentFile().toString();
+            System.setProperty("java.home", System.getenv("JAVA_HOME"));
 
-            JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+            JavaCompiler compiler = getSystemJavaCompiler();
             FileOutputStream errorStream = null;
             FileOutputStream outputStream = null;
             try {
@@ -141,6 +143,10 @@ public class wRebeca {
             if (outputStream != null && errorStream != null) {
                 System.out.println("Start compiling translated files of the given model " + pkgName + " in "
                         + inputFile.toString());
+                if(compiler == null)  {
+                    System.out.println("please make sure that you have installed jdk 8 or higher and set the JAVA_HOME variable properly.");
+                    return false;
+                }
                 int compilationResult = compiler.run(null, outputStream, errorStream, javaFiles);
                 System.out.println(compilationResult);
 
@@ -151,7 +157,9 @@ public class wRebeca {
                             + (compileInfo.getInstance().isReduction() ? " with applying reduction" : " without applying reduction"));
                     try {
                         System.out.println("Start creating the state space");
-                        // System.out.println(System.getProperty("java.class.path"));
+                        System.out.println(System.getProperty("java.class.path"));
+                        System.out.println("java -cp \"" + inputDirctory + "\";" + System.getProperty("java.class.path")
+                                + " " + pkgName + ".modeler \"" + inputDirctory + "\\" + pkgName + "\""); 
                         succ = runProcess("java -cp \"" + inputDirctory + "\";" + System.getProperty("java.class.path")
                                 + " " + pkgName + ".modeler \"" + inputDirctory + "\\" + pkgName + "\"");
                     } catch (Exception ex) {
@@ -235,7 +243,9 @@ public class wRebeca {
                         FileReader inputReader = new FileReader(filePath);
                         textArea.read(inputReader, null);
                         List<String> codeLines = Files.readAllLines(inputFile.toPath());
-                        if (inputFile.toString().matches(".*.wrebeca")) {
+                        if(inputFile.toString().matches(".*.rebeca")){
+                            compileInfo.getInstance().setClassic(true);
+                        } else if (inputFile.toString().matches(".*.wrebeca")) {
                             compileInfo.getInstance().setDynamic(true);
                         } else {
                             compileInfo.getInstance().setDynamic(false);
