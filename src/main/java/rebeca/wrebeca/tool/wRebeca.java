@@ -9,11 +9,8 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.EventQueue;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import javax.tools.JavaCompiler;
-import javax.tools.ToolProvider;
 import javax.swing.*;
 import javax.swing.event.TreeSelectionEvent;
-import javax.swing.event.TreeSelectionListener;
 import org.fife.ui.rtextarea.*;
 import org.fife.ui.rsyntaxtextarea.*;
 import java.awt.event.MouseAdapter;
@@ -32,19 +29,15 @@ import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
-import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.text.BadLocationException;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
-import static javax.tools.ToolProvider.getSystemJavaCompiler;
-
-import rebeca.wrebeca.common.*;
-import rebeca.wrebeca.dynamicNetwork.*;
-import rebeca.wrebeca.staticNetwork.*;
 
 public class wRebeca {
 
@@ -65,48 +58,29 @@ public class wRebeca {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             // "com.sun.java.swing.plaf.windows.WindowsLookAndFeel");
-        } catch (ClassNotFoundException e1) {
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException e1) {
             // TODO Auto-generated catch block
-            e1.printStackTrace();
-        } catch (InstantiationException e1) {
-            // TODO Auto-generated catch block
-            e1.printStackTrace();
-        } catch (IllegalAccessException e1) {
-            // TODO Auto-generated catch block
-            e1.printStackTrace();
-        } catch (UnsupportedLookAndFeelException e1) {
-            // TODO Auto-generated catch block
-            e1.printStackTrace();
         }
-        
-        EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                try {
 
-                    wRebeca window = new wRebeca();
-                    window.frame.setVisible(true);
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+        EventQueue.invokeLater(() -> {
+            try {
+                
+                wRebeca window = new wRebeca();
+                window.frame.setVisible(true);
+                
+            } catch (Exception e) {
             }
         });
     }
 
     private boolean create_stateSpace() {
-        FileFilter filter = new FileFilter() {
-            @Override
-            public boolean accept(File pathname) {
-                return pathname.toString().matches(".*.java");
-            }
-        };
+        FileFilter classfilter = (File pathname) -> pathname.toString().matches(".*.class");
         boolean succ = false;
         if (inputFile != null) {
-            String pkgName = inputFile.getName().toString().split("\\.")[0];
+            String pkgName = inputFile.getName().split("\\.")[0];
             String inputDirctory = inputFile.getParentFile().toString();
             System.setProperty("java.home", System.getenv("JAVA_HOME"));
 
-            JavaCompiler compiler = getSystemJavaCompiler();
             FileOutputStream errorStream = null;
             FileOutputStream outputStream = null;
             try {
@@ -114,63 +88,59 @@ public class wRebeca {
                 outputStream = new FileOutputStream(inputDirctory + "//" + pkgName + "/Output.txt");
 
             } catch (FileNotFoundException e1) {
-                // TODO Auto-generated catch block
-                e1.printStackTrace();
             }
             ////
             File modelerFile = new File(inputDirctory + "//" + pkgName + "//modeler.java");
             String changedModeler = FileToString(modelerFile);
 
-            String stateSpaceConfig = "super(" + compileInfo.getInstance().isClts() + "," +
-                    compileInfo.getInstance().isMcrl() + "," + compileInfo.getInstance().isLts()
+            String stateSpaceConfig = "super(" + compileInfo.getInstance().isClts() + ","
+                    + compileInfo.getInstance().isMcrl() + "," + compileInfo.getInstance().isLts()
                     + "," + compileInfo.getInstance().getMax_thread_num() + ");";
             System.out.println(stateSpaceConfig);
             changedModeler = changedModeler.replace("super(false,false,true,4);", stateSpaceConfig);
 
-            try {
-                FileWriter writer = new FileWriter(modelerFile);
-                writer.write(changedModeler);
-                writer.close();
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-            File[] translatedFiles = new File(inputDirctory + "//" + pkgName).listFiles((filter));
-            String[] javaFiles = new String[translatedFiles.length];
-            for (int i = 0; i < translatedFiles.length; i++) {
-                javaFiles[i] = translatedFiles[i].getPath();
-            }
-            if (outputStream != null && errorStream != null) {
-                System.out.println("Start compiling translated files of the given model " + pkgName + " in "
-                        + inputFile.toString());
-                if(compiler == null)  {
-                    System.out.println("please make sure that you have installed jdk 8 or higher and set the JAVA_HOME variable properly.");
-                    return false;
+                try (FileWriter writer = new FileWriter(modelerFile)) {
+                    writer.write(changedModeler);
+                } catch (IOException e) {
                 }
-                int compilationResult = compiler.run(null, outputStream, errorStream, javaFiles);
-                System.out.println(compilationResult);
+            
+            File[] classFiles = new File(inputDirctory + "//" + pkgName).listFiles((classfilter));
+            for (int i = 0; i < classFiles.length; i++) {
+                try {
+                    Files.deleteIfExists(classFiles[i].toPath());
+                } catch (IOException ex) {
+                    Logger.getLogger(wRebeca.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+            
+            if (outputStream != null && errorStream != null) {
 
-                if (compilationResult == 0) {
-                    System.out.println("Compilation is successful");
-                    System.out.println("state space creation is started with the following configuration:");
-                    System.out.println("Storage type: " + (compileInfo.getInstance().isQueue() ? "Queue" : "Bag") + " "
-                            + (compileInfo.getInstance().isReduction() ? " with applying reduction" : " without applying reduction"));
-                    try {
+                System.out.println("Compilation is successful");
+                System.out.println("state space creation is started with the following configuration:");
+                System.out.println("Storage type: " + (compileInfo.getInstance().isQueue() ? "Queue" : "Bag") + " "
+                        + (compileInfo.getInstance().isReduction() ? " with applying reduction" : " without applying reduction"));
+                try {
+                    System.out.println("javac -cp \"" + inputDirctory + "\";" + System.getProperty("java.class.path")
+                            +"\" "+ inputDirctory + "\\" + pkgName + "\\*.java");
+                    succ = runProcess("javac -cp \"" + inputDirctory + "\";" + System.getProperty("java.class.path")
+                            +" "+ inputDirctory + "\\" + pkgName + "\\*.java\"");
+                    process.join();
+                    if (Files.exists(Paths.get(inputDirctory + "\\" + pkgName + "\\modeler.java"))) {
                         System.out.println("Start creating the state space");
                         System.out.println(System.getProperty("java.class.path"));
                         System.out.println("java -cp \"" + inputDirctory + "\";" + System.getProperty("java.class.path")
-                                + " " + pkgName + ".modeler \"" + inputDirctory + "\\" + pkgName + "\""); 
+                                + ((compileInfo.getInstance().getHeapSize()!=0)?(" -Xmx" + compileInfo.getInstance().getHeapSize()+"m "):" ")+ pkgName + ".modeler \"" + inputDirctory + "\\" + pkgName + "\"");
                         succ = runProcess("java -cp \"" + inputDirctory + "\";" + System.getProperty("java.class.path")
-                                + " " + pkgName + ".modeler \"" + inputDirctory + "\\" + pkgName + "\"");
-                    } catch (Exception ex) {
-                        // TODO Auto-generated catch block
-                        System.out.println("Sorry!!! State space generation is not possible duo to some errors");
-                        ex.printStackTrace();
+                                + ((compileInfo.getInstance().getHeapSize()!=0)?(" -Xmx" + compileInfo.getInstance().getHeapSize()+"m "):" ") + pkgName + ".modeler \"" + inputDirctory + "\\" + pkgName + "\"");
                     }
-                } else {
 
-                    System.out.println("Compilation Failed");
+                } catch (Exception ex) {
+                    // TODO Auto-generated catch block
+                    System.out.println("Sorry!!! State space generation is not possible duo to some errors");
                 }
+            } else {
+
+                System.out.println("Compilation Failed");
             }
         }
         return succ;
@@ -209,66 +179,57 @@ public class wRebeca {
         JMenuBar menuBar = new JMenuBar();
         frame.setJMenuBar(menuBar);
 
-
-        frame.addWindowListener(new WindowAdapter(){
-                public void windowClosing(WindowEvent e){
-                System.exit(0); 
-                }
-            });
-
+        frame.addWindowListener(new WindowAdapter() {
+            public void windowClosing(WindowEvent e) {
+                System.exit(0);
+            }
+        });
 
         mnFile = new JMenu("File");
         menuBar.add(mnFile);
 
         mntmOpen = new JMenuItem("Open");
-        mntmOpen.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-
-                chooser = new JFileChooser();
-                chooser.setCurrentDirectory(new java.io.File("."));
-                chooser.setDialogTitle("Select a File");
-                chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
-                FileNameExtensionFilter wRebecaFilter = new FileNameExtensionFilter(
-                        "wireless Rebeca for dynamic topology(.wRebeca)", "wRebeca");
-                FileNameExtensionFilter bRebecaFilter = new FileNameExtensionFilter(
-                        "broadcasting Rebeca for static topology(.bRebeca)", "bRebeca");
-                chooser.addChoosableFileFilter(bRebecaFilter);
-                chooser.addChoosableFileFilter(wRebecaFilter);
-                if (chooser.showOpenDialog(mntmOpen) == JFileChooser.APPROVE_OPTION) {
-                    System.out.println("CurrentDirectory: " + chooser.getCurrentDirectory());
-                    System.out.println("SelectedFile: " + chooser.getSelectedFile());
-                    filePath = chooser.getSelectedFile().getPath();
-                    inputFile = chooser.getSelectedFile();
-                    try {
-                        FileReader inputReader = new FileReader(filePath);
-                        textArea.read(inputReader, null);
-                        List<String> codeLines = Files.readAllLines(inputFile.toPath());
-                        if(inputFile.toString().matches(".*.rebeca")){
-                            compileInfo.getInstance().setClassic(true);
-                        } else if (inputFile.toString().matches(".*.wrebeca")) {
-                            compileInfo.getInstance().setDynamic(true);
-                        } else {
-                            compileInfo.getInstance().setDynamic(false);
-                        }
-                        DefaultMutableTreeNode r = createCodeTree(codeLines);
-                        DefaultTreeModel treeModel = (DefaultTreeModel) trSource.getModel();
-                        treeModel.setRoot(r);
-                        treeModel.reload();
-                        mnVerification.setEnabled(false);
-                        mntmCompile.setEnabled(true);
-                        mntmCreateStateSpace.setEnabled(false);
-                    } catch (FileNotFoundException e1) {
-                        // TODO Auto-generated catch block
-                        e1.printStackTrace();
-                    } catch (IOException e1) {
-                        // TODO Auto-generated catch block
-                        e1.printStackTrace();
+        mntmOpen.addActionListener((ActionEvent e) -> {
+            chooser = new JFileChooser();
+            chooser.setCurrentDirectory(new java.io.File("."));
+            chooser.setDialogTitle("Select a File");
+            chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+            FileNameExtensionFilter wRebecaFilter = new FileNameExtensionFilter(
+                    "wireless Rebeca for dynamic topology(.wRebeca)", "wRebeca");
+            FileNameExtensionFilter bRebecaFilter = new FileNameExtensionFilter(
+                    "broadcasting Rebeca for static topology(.bRebeca)", "bRebeca");
+            chooser.addChoosableFileFilter(bRebecaFilter);
+            chooser.addChoosableFileFilter(wRebecaFilter);
+            if (chooser.showOpenDialog(mntmOpen) == JFileChooser.APPROVE_OPTION) {
+                System.out.println("CurrentDirectory: " + chooser.getCurrentDirectory());
+                System.out.println("SelectedFile: " + chooser.getSelectedFile());
+                filePath = chooser.getSelectedFile().getPath();
+                inputFile = chooser.getSelectedFile();
+                try {
+                    FileReader inputReader = new FileReader(filePath);
+                    textArea.read(inputReader, null);
+                    List<String> codeLines = Files.readAllLines(inputFile.toPath());
+                    if (inputFile.toString().matches(".*.rebeca")) {
+                        compileInfo.getInstance().setClassic(true);
+                    } else if (inputFile.toString().matches(".*.wrebeca")) {
+                        compileInfo.getInstance().setDynamic(true);
+                    } else {
+                        compileInfo.getInstance().setDynamic(false);
                     }
-                } else {
-                    System.out.println("No Selection ");
+                    DefaultMutableTreeNode r = createCodeTree(codeLines);
+                    DefaultTreeModel treeModel1 = (DefaultTreeModel) trSource.getModel();
+                    treeModel1.setRoot(r);
+                    treeModel1.reload();
+                    mnVerification.setEnabled(false);
+                    mntmCompile.setEnabled(true);
+                    mntmCreateStateSpace.setEnabled(false);
+                }catch (FileNotFoundException e1) {
+                }catch (IOException e1) {
+                    // TODO Auto-generated catch block
                 }
+            } else {
+                System.out.println("No Selection ");
             }
-
         });
         mntmOpen.addMouseListener(new MouseAdapter() {
             @Override
@@ -278,26 +239,24 @@ public class wRebeca {
         });
 
         JMenuItem mntmNew = new JMenuItem("New");
-        mntmNew.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                if (filePath != null) {
-                    // save
-                    saveFile();
-                    // new
-                    inputFile = null;
-                    filePath = null;
-                    try {
-                        File file = new File("newFile.txt");
-                        if (!Files.exists(file.toPath())) {
-                            file.createNewFile();
-                        }
-                        textArea.read(new FileReader("newFile.txt"), null);
-                        treeModel.setRoot(new DefaultMutableTreeNode("Nothing"));
-                        treeModel.reload();
-                    } catch (IOException e1) {
-                        // TODO Auto-generated catch block
-                        e1.printStackTrace();
+        mntmNew.addActionListener((ActionEvent e) -> {
+            if (filePath != null) {
+                // save
+                saveFile();
+                // new
+                inputFile = null;
+                filePath = null;
+                try {
+                    File file = new File("newFile.txt");
+                    if (!Files.exists(file.toPath())) {
+                        file.createNewFile();
                     }
+                    textArea.read(new FileReader("newFile.txt"), null);
+                    treeModel.setRoot(new DefaultMutableTreeNode("Nothing"));
+                    treeModel.reload();
+                } catch (IOException e1) {
+                    // TODO Auto-generated catch block
+                    e1.printStackTrace();
                 }
             }
         });
@@ -305,19 +264,14 @@ public class wRebeca {
         mnFile.add(mntmOpen);
 
         mntmSave = new JMenuItem("Save");
-        mntmSave.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                saveFile();
-
-            }
+        mntmSave.addActionListener((ActionEvent e) -> {
+            saveFile();
         });
         mnFile.add(mntmSave);
 
         JMenuItem mntmExit = new JMenuItem("Exit");
-        mntmExit.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                System.exit(0);
-            }
+        mntmExit.addActionListener((ActionEvent e) -> {
+            System.exit(0);
         });
         mnFile.add(mntmExit);
 
@@ -326,34 +280,29 @@ public class wRebeca {
 
         mntmCompile = new JMenuItem("Compile");
         mntmCompile.setEnabled(false);
-        mntmCompile.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                if (inputFile == null) {
-                    saveFile();
-                }
-                if (inputFile != null) {
-                    compile = new frmCompile(errorList, frame);
-                    System.out.println("configure compiling options");
-                    compile.showFrm(filePath);
-                }
-                // compile.showFrm();
-
+        mntmCompile.addActionListener((ActionEvent e) -> {
+            if (inputFile == null) {
+                saveFile();
             }
+            if (inputFile != null) {
+                compile = new frmCompile(errorList, frame);
+                System.out.println("configure compiling options");
+                compile.showFrm(filePath);
+            }
+            // compile.showFrm();
         });
         mnSource.add(mntmCompile);
 
         mntmCreateStateSpace = new JMenuItem("Create State Space");
         mntmCreateStateSpace.setEnabled(false);
-        mntmCreateStateSpace.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                if (compileInfo.getInstance().isMcrl()) {
-                    if (!compileInfo.getInstance().isClts()) {
-                        compileInfo.getInstance().setLts(true);
-                    }
-                    compileInfo.getInstance().setMcrl(false);
+        mntmCreateStateSpace.addActionListener((ActionEvent e) -> {
+            if (compileInfo.getInstance().isMcrl()) {
+                if (!compileInfo.getInstance().isClts()) {
+                    compileInfo.getInstance().setLts(true);
                 }
-                create_stateSpace();
+                compileInfo.getInstance().setMcrl(false);
             }
+            create_stateSpace();
         });
         mnSource.add(mntmCreateStateSpace);
         mnVerification = new JMenu("Verification");
@@ -361,78 +310,74 @@ public class wRebeca {
         mnSource.add(mnVerification);
 
         JMenuItem mntmInvariant = new JMenuItem("Invariant");
-        mntmInvariant.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                load_invariant();
-                compileInfo.getInstance().setMcrl(false);
-                compileInfo.getInstance().setLts(true);
-                create_stateSpace();
-            }
+        mntmInvariant.addActionListener((ActionEvent e) -> {
+            load_invariant();
+            compileInfo.getInstance().setMcrl(false);
+            compileInfo.getInstance().setLts(true);
+            create_stateSpace();
         });
         mnVerification.add(mntmInvariant);
 
         JMenuItem mntmMcrl = new JMenuItem("mcrl");
-        mntmMcrl.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                compileInfo.getInstance().setMcrl(true);
-                compileInfo.getInstance().setLts(false);
-                String pkgName = inputFile.getName().toString().split("\\.")[0];
-                String inputDirctory = inputFile.getParentFile().toString();
-
-                chooser = new JFileChooser();
-                chooser.setCurrentDirectory(new java.io.File("."));
-                chooser.setDialogTitle("Select a File");
-                chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
-                FileNameExtensionFilter formulaFilter = new FileNameExtensionFilter("textual	µ-Calculus(.mcf)",
-                        "mcf");
-                chooser.setFileFilter(formulaFilter);
-                if (chooser.showOpenDialog(mntmOpen) == JFileChooser.APPROVE_OPTION) {
-                    System.out.println("getSelectedFile() : " + chooser.getSelectedFile());
-                    try {
-                        Files.deleteIfExists(Paths.get(inputDirctory + "/" + pkgName + "/Output/stateSpaceMcrl.aut"));
-                    } catch (IOException e2) {
-                        // TODO Auto-generated catch block
-                        e2.printStackTrace();
-                    }
-                    if (create_stateSpace()) {
-                        new Thread(new Runnable() {
-                            public void run() {
-                                while (!Files.exists(
-                                        Paths.get(inputDirctory + "/" + pkgName + "/Output/stateSpaceMcrl.aut"))) {
-                                    try {
-                                        Thread.sleep(1000);
-                                    } catch (InterruptedException e1) {
-                                        // TODO Auto-generated catch block
-                                        e1.printStackTrace();
-                                    }
-                                }
+        mntmMcrl.addActionListener((ActionEvent e) -> {
+            compileInfo.getInstance().setMcrl(true);
+            compileInfo.getInstance().setLts(false);
+            String pkgName = inputFile.getName().toString().split("\\.")[0];
+            String inputDirctory = inputFile.getParentFile().toString();
+            
+            chooser = new JFileChooser();
+            chooser.setCurrentDirectory(new java.io.File("."));
+            chooser.setDialogTitle("Select a File");
+            chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+            FileNameExtensionFilter formulaFilter = new FileNameExtensionFilter("textual	µ-Calculus(.mcf)",
+                    "mcf");
+            chooser.setFileFilter(formulaFilter);
+            if (chooser.showOpenDialog(mntmOpen) == JFileChooser.APPROVE_OPTION) {
+                System.out.println("getSelectedFile() : " + chooser.getSelectedFile());
+                try {
+                    Files.deleteIfExists(Paths.get(inputDirctory + "/" + pkgName + "/Output/stateSpaceMcrl.aut"));
+                } catch (IOException e2) {
+                    // TODO Auto-generated catch block
+                    e2.printStackTrace();
+                }
+                if (create_stateSpace()) {
+                    new Thread(new Runnable() {
+                        public void run() {
+                            while (!Files.exists(
+                                    Paths.get(inputDirctory + "/" + pkgName + "/Output/stateSpaceMcrl.aut"))) {
                                 try {
-                                    String command = "";
-                                    if (Files.exists(
-                                            Paths.get(inputDirctory + "/" + pkgName + "/Output/stateSpaceMcrl.aut"))) {
-                                        command = "lts2pbes \"" + inputDirctory + "/" + pkgName
-                                                + "/Output/stateSpaceMcrl.aut" + "\" \"" + inputDirctory + "/" + pkgName
-                                                + "/Output/stateSpaceMcrl.pbes" + "\"  --data=\"" + inputDirctory + "/"
-                                                + pkgName + "/Output/state_space.mcrl2" + "\" --formula=\""
-                                                + chooser.getSelectedFile().getPath() + "\"";
-                                        System.out.println(command);
-                                        runProcess(command);
-                                        if (Files.exists(Paths
-                                                .get(inputDirctory + "/" + pkgName + "/Output/stateSpaceMcrl.pbes"))) {
-                                            command = "pbes2bool \"" + inputDirctory + "/" + pkgName
-                                                    + "/Output/stateSpaceMcrl.pbes"
-                                                    + "\" --erase=none --rewriter=jitty --search=breadth-first --strategy=0 --verbose";
-                                            System.out.println(command);
-                                            runProcess(command);
-                                        }
-                                    }
-                                } catch (Exception e1) {
+                                    Thread.sleep(1000);
+                                } catch (InterruptedException e1) {
                                     // TODO Auto-generated catch block
                                     e1.printStackTrace();
                                 }
                             }
-                        }).start();
-                    }
+                            try {
+                                String command = "";
+                                if (Files.exists(
+                                        Paths.get(inputDirctory + "/" + pkgName + "/Output/stateSpaceMcrl.aut"))) {
+                                    command = "lts2pbes \"" + inputDirctory + "/" + pkgName
+                                            + "/Output/stateSpaceMcrl.aut" + "\" \"" + inputDirctory + "/" + pkgName
+                                            + "/Output/stateSpaceMcrl.pbes" + "\"  --data=\"" + inputDirctory + "/"
+                                            + pkgName + "/Output/state_space.mcrl2" + "\" --formula=\""
+                                            + chooser.getSelectedFile().getPath() + "\"";
+                                    System.out.println(command);
+                                    runProcess(command);
+                                    if (Files.exists(Paths
+                                            .get(inputDirctory + "/" + pkgName + "/Output/stateSpaceMcrl.pbes"))) {
+                                        command = "pbes2bool \"" + inputDirctory + "/" + pkgName
+                                                + "/Output/stateSpaceMcrl.pbes"
+                                                + "\" --erase=none --rewriter=jitty --search=breadth-first --strategy=0 --verbose";
+                                        System.out.println(command);
+                                        runProcess(command);
+                                    }
+                                }
+                            } catch (Exception e1) {
+                                // TODO Auto-generated catch block
+                                e1.printStackTrace();
+                            }
+                        }
+                    }).start();
                 }
             }
         });
@@ -481,32 +426,28 @@ public class wRebeca {
 
         errorList.getColumnModel().getColumn(1).setPreferredWidth(548);
 
-        trSource.addTreeSelectionListener(new TreeSelectionListener() {
-            public void valueChanged(TreeSelectionEvent e) {
-                DefaultMutableTreeNode node = (DefaultMutableTreeNode) trSource.getLastSelectedPathComponent();
-
-                /* if nothing is selected */
-                if (node == null) {
-                    return;
-                }
-
-                /* retrieve the node that was selected */
-                // Object nodeInfo = node.getUserObject();
-                // textArea.setCaret(new Caret());
-                System.out.println(textArea.getCaretLineNumber());
-
-                // .setActiveLineRange(20, 25);
-                // .setSelectedOccurrenceText("Node");
-                // .setSelectionStart(25);
-                try {
-                    textArea.addLineHighlight(25, Color.CYAN);
-                } catch (BadLocationException e1) {
-                    // TODO Auto-generated catch block
-                    e1.printStackTrace();
-                }
-                // getui
-
+        trSource.addTreeSelectionListener((TreeSelectionEvent e) -> {
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode) trSource.getLastSelectedPathComponent();
+            
+            /* if nothing is selected */
+            if (node == null) {
+                return;
             }
+            
+            /* retrieve the node that was selected */
+            // Object nodeInfo = node.getUserObject();
+            // textArea.setCaret(new Caret());
+            System.out.println(textArea.getCaretLineNumber());
+            
+            // .setActiveLineRange(20, 25);
+            // .setSelectedOccurrenceText("Node");
+            // .setSelectionStart(25);
+            try {
+                textArea.addLineHighlight(25, Color.CYAN);
+            } catch (BadLocationException e1) {
+                // TODO Auto-generated catch block
+            }
+            // getui
         });
 
     }
@@ -573,7 +514,6 @@ public class wRebeca {
                 mntmCompile.setEnabled(true);
             } catch (IOException e1) {
                 // TODO Auto-generated catch block
-                e1.printStackTrace();
             }
         }
     }
@@ -622,15 +562,13 @@ public class wRebeca {
             }
         } catch (IOException e) {
             // TODO Auto-generated catch block
-            e.printStackTrace();
         }
 
         return str;
     }
 
- 
     private void load_invariant() {
-        String pkgName = inputFile.getName().toString().split("\\.")[0];
+        String pkgName = inputFile.getName().split("\\.")[0];
         String inputDirctory = inputFile.getParentFile().toString();
         File modelerFile = new File(inputDirctory + "/" + pkgName + "/modeler.java");
         File invFile;
@@ -667,7 +605,7 @@ public class wRebeca {
                     }
                     invInsertion += "} catch (NoSuchMethodException e) {e.printStackTrace();} catch (SecurityException e) {e.printStackTrace();}";
 
-                    modeler = modeler.toString().replace("//Adding Invariants", invInsertion);
+                    modeler = modeler.replace("//Adding Invariants", invInsertion);
                     FileWriter writer = new FileWriter(modelerFile);
                     writer.write(modeler);
                     writer.close();

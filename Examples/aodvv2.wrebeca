@@ -122,7 +122,7 @@ reactiveclass Node()
                         }
                     }   
 
-                      groupcast(affected_neighbours,rec_rerr(dip_,self,dip_sqn));
+                      multicast(affected_neighbours,rec_rerr(dip_,self,dip_sqn));
                 }  
                 //send new request
                 if(sn<3)
@@ -364,7 +364,7 @@ reactiveclass Node()
                                 }
                             }
                         }                     
-                         groupcast(affected_neighbours,rec_rerr(dip_,self,dip_sqn));
+                         multicast(affected_neighbours,rec_rerr(dip_,self,dip_sqn));
                     }
                 }
                 else
@@ -621,7 +621,7 @@ reactiveclass Node()
                             }
                         }
                     }      
-                     groupcast(affected_neighbours,rec_rerr(dip_,self,dip_sqn));
+                     multicast(affected_neighbours,rec_rerr(dip_,self,dip_sqn));
                  }
             }
         }
@@ -683,7 +683,7 @@ reactiveclass Node()
                     }
                 } 
             }
-            groupcast(affected_neighbours,rec_rerr(source_,self,dip_sqn));
+            multicast(affected_neighbours,rec_rerr(source_,self,dip_sqn));
         }
     }
     
@@ -733,7 +733,7 @@ reactiveclass Node()
                         }
                     }   
 
-                     groupcast(affected_neighbours,rec_rerr(dip_,self,dip_sqn));
+                     multicast(affected_neighbours,rec_rerr(dip_,self,dip_sqn));
                 }  
 
             }
@@ -749,13 +749,13 @@ reactiveclass Node()
                     dip_sqn[dip_]=dsn[dip_];
                     for(int i=0;i<4;i++)
                     {
-                        //groupcast(precs , rec_rerr({(dip, sqn[dip]))} , self)); 
+                        //multicast(precs , rec_rerr({(dip, sqn[dip]))} , self)); 
                         if(pre[dip_][i]==true)
                         {
                             affected_neighbours[i]=true;
                         }
                     }
-                    groupcast(affected_neighbours,rec_rerr(dip_,self,dip_sqn));
+                    multicast(affected_neighbours,rec_rerr(dip_,self,dip_sqn));
                 }
             }
         }

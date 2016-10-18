@@ -16,6 +16,7 @@ public class compileInfo {
             dynamic=true ;
             classic=false;
             max_thread_num=4;
+            heapSize =0;
         }
         
         public static compileInfo getInstance(){
@@ -105,6 +106,14 @@ public class compileInfo {
         this.classic = classic;
         this.dynamic = false;
     }
+    
+    public void setHeapSize(int size){
+        this.heapSize = size;
+    }
+    
+    public int getHeapSize(){
+        return this.heapSize;
+    }
         //public static boolean with_tau=false;
         private  boolean compile;
         private  boolean queue;
@@ -116,5 +125,6 @@ public class compileInfo {
         private  boolean dynamic;
         private  int max_thread_num;
         private boolean classic;
+        private int heapSize;
         
 }

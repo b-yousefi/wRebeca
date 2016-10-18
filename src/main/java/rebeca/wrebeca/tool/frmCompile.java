@@ -67,6 +67,7 @@ public class frmCompile {
     JButton btnCancel;
     JButton btnOk;
     JFrame mainWindow;
+    JFormattedTextField txtHeapSize;
 
     /**
      * Create the application.
@@ -143,6 +144,7 @@ public class frmCompile {
                 compileInfo.getInstance().setClts(chckbxClts.isSelected());
                 compileInfo.getInstance().setCompile(true);
                 compileInfo.getInstance().setMax_thread_num(!txtMaxThread.getText().isEmpty()?Integer.parseInt(txtMaxThread.getText()):0);
+                compileInfo.getInstance().setHeapSize(!txtHeapSize.getText().isEmpty()?Integer.parseInt(txtHeapSize.getText()):0);
                 System.out.println("Compiling the file: " + filePath + " Storage type: " + (compileInfo.getInstance().isQueue() ? "Queue" : "Bag")
                         + (compileInfo.getInstance().reduction ? " with applying reduction" : " without applying reduction"));
 
@@ -178,61 +180,71 @@ public class frmCompile {
 
         JLabel lblNewLabel = new JLabel("Number of threads");
 
+        JLabel lblHeapSize = new JLabel("heap size(mb)");
+        
+        txtHeapSize = new JFormattedTextField();
+        
         GroupLayout gl_contentPane = new GroupLayout(contentPane);
         gl_contentPane.setHorizontalGroup(
                 gl_contentPane.createParallelGroup(Alignment.LEADING)
-                .addGroup(gl_contentPane.createSequentialGroup()
-                        .addContainerGap()
-                        .addGroup(gl_contentPane.createParallelGroup(Alignment.TRAILING)
-                                .addGroup(gl_contentPane.createSequentialGroup()
-                                        .addComponent(rdbtnBag)
-                                        .addContainerGap(217, Short.MAX_VALUE))
-                                .addGroup(gl_contentPane.createSequentialGroup()
-                                        .addGroup(gl_contentPane.createParallelGroup(Alignment.LEADING)
-                                                .addGroup(gl_contentPane.createSequentialGroup()
-                                                        .addGroup(gl_contentPane.createParallelGroup(Alignment.TRAILING)
-                                                                .addGroup(gl_contentPane.createSequentialGroup()
-                                                                        .addComponent(btnOk)
-                                                                        .addGap(24))
-                                                                .addComponent(lblNewLabel))
-                                                        .addPreferredGap(ComponentPlacement.RELATED, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                                        .addComponent(txtMaxThread, GroupLayout.PREFERRED_SIZE, 29, GroupLayout.PREFERRED_SIZE))
-                                                .addComponent(rdbtnQueue))
-                                        .addPreferredGap(ComponentPlacement.RELATED)
-                                        .addGroup(gl_contentPane.createParallelGroup(Alignment.LEADING)
-                                                .addGroup(gl_contentPane.createSequentialGroup()
-                                                        .addPreferredGap(ComponentPlacement.RELATED, 14, Short.MAX_VALUE)
-                                                        .addComponent(btnCancel)
-                                                        .addGap(30))
-                                                .addGroup(gl_contentPane.createSequentialGroup()
-                                                        .addGap(47)
-                                                        .addGroup(gl_contentPane.createParallelGroup(Alignment.LEADING)
+                        .addGroup(gl_contentPane.createSequentialGroup()
+                                .addGroup(gl_contentPane.createParallelGroup(Alignment.LEADING)
+                                        .addGroup(gl_contentPane.createSequentialGroup()
+                                                .addGap(31)
+                                                .addComponent(btnOk)
+                                                .addGap(118)
+                                                .addComponent(btnCancel))
+                                        .addGroup(gl_contentPane.createSequentialGroup()
+                                                .addGap(10)
+                                                .addGroup(gl_contentPane.createParallelGroup(Alignment.LEADING)
+                                                        .addComponent(lblNewLabel)
+                                                        .addComponent(rdbtnQueue)
+                                                        .addComponent(rdbtnBag))
+                                                .addGap(4)
+                                                .addGroup(gl_contentPane.createParallelGroup(Alignment.LEADING)
+                                                        .addGroup(gl_contentPane.createSequentialGroup()
+                                                                .addComponent(txtMaxThread, GroupLayout.PREFERRED_SIZE, 29, GroupLayout.PREFERRED_SIZE)
+                                                                .addGap(22)
+                                                                .addComponent(lblHeapSize, GroupLayout.PREFERRED_SIZE, 72, GroupLayout.PREFERRED_SIZE)
+                                                                .addPreferredGap(ComponentPlacement.RELATED)
+                                                                .addComponent(txtHeapSize, GroupLayout.PREFERRED_SIZE, 29, GroupLayout.PREFERRED_SIZE))
+                                                        .addGroup(gl_contentPane.createSequentialGroup()
                                                                 .addComponent(chckbxClts)
-                                                                .addComponent(rdbtnApplyReduction)
+                                                                .addGap(10)
                                                                 .addComponent(chckbxLts))
-                                                        .addContainerGap())))))
+                                                        .addComponent(rdbtnApplyReduction))))
+                                .addGap(11))
         );
         gl_contentPane.setVerticalGroup(
                 gl_contentPane.createParallelGroup(Alignment.LEADING)
-                .addGroup(gl_contentPane.createSequentialGroup()
-                        .addContainerGap()
-                        .addGroup(gl_contentPane.createParallelGroup(Alignment.BASELINE)
-                                .addComponent(rdbtnApplyReduction)
-                                .addComponent(lblNewLabel)
-                                .addComponent(txtMaxThread, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE))
-                        .addPreferredGap(ComponentPlacement.UNRELATED)
-                        .addGroup(gl_contentPane.createParallelGroup(Alignment.BASELINE)
-                                .addComponent(chckbxLts)
-                                .addComponent(rdbtnQueue))
-                        .addPreferredGap(ComponentPlacement.UNRELATED)
-                        .addGroup(gl_contentPane.createParallelGroup(Alignment.BASELINE)
-                                .addComponent(rdbtnBag)
-                                .addComponent(chckbxClts))
-                        .addPreferredGap(ComponentPlacement.RELATED, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addGroup(gl_contentPane.createParallelGroup(Alignment.BASELINE)
-                                .addComponent(btnOk)
-                                .addComponent(btnCancel))
-                        .addContainerGap())
+                        .addGroup(gl_contentPane.createSequentialGroup()
+                                .addGroup(gl_contentPane.createParallelGroup(Alignment.LEADING)
+                                        .addGroup(gl_contentPane.createSequentialGroup()
+                                                .addGap(4)
+                                                .addComponent(lblNewLabel))
+                                        .addGroup(gl_contentPane.createSequentialGroup()
+                                                .addGap(1)
+                                                .addGroup(gl_contentPane.createParallelGroup(Alignment.BASELINE)
+                                                        .addComponent(txtMaxThread, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+                                                        .addComponent(lblHeapSize)
+                                                        .addComponent(txtHeapSize, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE))))
+                                .addGap(7)
+                                .addGroup(gl_contentPane.createParallelGroup(Alignment.LEADING)
+                                        .addComponent(rdbtnQueue)
+                                        .addComponent(rdbtnApplyReduction))
+                                .addGroup(gl_contentPane.createParallelGroup(Alignment.LEADING)
+                                        .addGroup(gl_contentPane.createSequentialGroup()
+                                                .addGap(3)
+                                                .addComponent(rdbtnBag)
+                                                .addPreferredGap(ComponentPlacement.RELATED)
+                                                .addGroup(gl_contentPane.createParallelGroup(Alignment.LEADING)
+                                                        .addComponent(btnOk)
+                                                        .addComponent(btnCancel)))
+                                        .addGroup(gl_contentPane.createSequentialGroup()
+                                                .addPreferredGap(ComponentPlacement.RELATED)
+                                                .addGroup(gl_contentPane.createParallelGroup(Alignment.BASELINE)
+                                                        .addComponent(chckbxClts)
+                                                        .addComponent(chckbxLts)))))
         );
         contentPane.setLayout(gl_contentPane);
     }
