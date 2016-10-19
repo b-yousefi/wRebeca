@@ -79,7 +79,6 @@ public class wRebeca {
         if (inputFile != null) {
             String pkgName = inputFile.getName().split("\\.")[0];
             String inputDirctory = inputFile.getParentFile().toString();
-            System.setProperty("java.home", System.getenv("JAVA_HOME"));
 
             FileOutputStream errorStream = null;
             FileOutputStream outputStream = null;
