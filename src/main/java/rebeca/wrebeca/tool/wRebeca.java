@@ -6,6 +6,7 @@ package rebeca.wrebeca.tool;
  */
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.EventQueue;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -32,6 +33,8 @@ import java.util.List;
 import java.awt.event.ActionEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.OutputStream;
+import java.net.URISyntaxException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.table.DefaultTableModel;
@@ -111,7 +114,11 @@ public class wRebeca {
                     Logger.getLogger(wRebeca.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
-            
+            if(System.getenv("JAVA_HOME") == null){
+                JOptionPane.showMessageDialog(frame, "You need to install the Java Development Kit (JDK) version 8 or later and set the JAVA_HOME variable properly.", "Error", 0);
+                return false;
+            }
+            System.setProperty("java.home", System.getenv("JAVA_HOME"));
             if (outputStream != null && errorStream != null) {
 
                 System.out.println("Compilation is successful");
@@ -226,8 +233,6 @@ public class wRebeca {
                 }catch (IOException e1) {
                     // TODO Auto-generated catch block
                 }
-            } else {
-                System.out.println("No Selection ");
             }
         });
         mntmOpen.addMouseListener(new MouseAdapter() {
@@ -313,7 +318,7 @@ public class wRebeca {
             load_invariant();
             compileInfo.getInstance().setMcrl(false);
             compileInfo.getInstance().setLts(true);
-            create_stateSpace();
+            //create_stateSpace();
         });
         mnVerification.add(mntmInvariant);
 
@@ -387,7 +392,54 @@ public class wRebeca {
 
         JMenuItem mntmUserManual = new JMenuItem("User Manual");
         mnHelp.add(mntmUserManual);
-
+        mntmUserManual.addActionListener((ActionEvent e) -> { 
+            
+            if (Desktop.isDesktopSupported()) {
+            // File in user working directory, System.getProperty("user.dir");
+            File file = new File("UserManual.pdf");
+            if (!file.exists()) {
+                // In JAR
+                InputStream inputStream = ClassLoader.getSystemClassLoader()
+                                    .getResourceAsStream("UserManual.pdf");
+                // Copy file
+                OutputStream outputStream;
+                try {               
+                outputStream = new FileOutputStream(file);
+                byte[] buffer = new byte[1024];
+                int length;
+                while ((length = inputStream.read(buffer)) > 0) {
+                    outputStream.write(buffer, 0, length);
+                }
+                outputStream.flush();
+                outputStream.close();
+                inputStream.close();
+                } catch (FileNotFoundException ex) {
+                    Logger.getLogger(wRebeca.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (IOException ex) {
+                    Logger.getLogger(wRebeca.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+                try {
+                    java.awt.Desktop.getDesktop().open(file);
+                } catch (IOException ex) {
+                    Logger.getLogger(wRebeca.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+            
+//        try { 
+//            File file = new File(getClass().getClassLoader().getResource("UserManual.pdf").getFile());
+//            java.awt.Desktop.getDesktop().open(file);
+//        } catch (IOException ex) {
+//            Logger.getLogger(wRebeca.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+        });
+        
+        JMenuItem mntmAbout = new JMenuItem("About");
+        mnHelp.add(mntmAbout);
+        mntmAbout.addActionListener((ActionEvent e) -> {           
+            JOptionPane.showMessageDialog(frame, "https://github.com/b-yousefi/wRebeca","About", 1);
+        });
+                
         JPanel cpCenter = new JPanel(new BorderLayout());
         frame.setContentPane(cpCenter);
         JPanel cp = new JPanel(new BorderLayout());

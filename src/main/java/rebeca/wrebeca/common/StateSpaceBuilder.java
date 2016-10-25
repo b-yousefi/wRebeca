@@ -69,8 +69,13 @@ public class StateSpaceBuilder {
         TimerTask printNumStates = new TimerTask() {
             @Override
             public void run() {
-                System.out.println("number of reached states: " + VisitedGlobalstates.getInstance().size().toString());
+                System.out.println("the number of states: " + Trans.getInstance().getNumOfStates());
+                System.out.println("the number of transitions:" + Trans.getInstance().getNumOfTransitions());
                 if(isTerminated()){
+                    System.out.println("******************State space is created******************");
+                    System.out.println("the final number of states: " + Trans.getInstance().getNumOfStates());
+                    System.out.println("the final number of transitions:" + Trans.getInstance().getNumOfTransitions());                   
+                    System.out.println("The output files are stored in the following path: " + Trans.getInstance().getOutputPath() + "\\Output");
                     complete_building();
                     timer.cancel();
                 }
