@@ -18,7 +18,7 @@ public class Qu implements Istorage {
     }
 
     @Override
-    public List<Message> getNaxt() {
+    public List<Message> getNext() {
         List<Message> result = new ArrayList<>();
         result.add(storage.peek());
         return result;
@@ -134,7 +134,7 @@ public class Qu implements Istorage {
     @Override
     public Message getInitialMessage() {
         if (this.hasInitMessage()) {
-            return this.getNaxt().get(0);
+            return this.getNext().get(0);
         }
         return null;
     }

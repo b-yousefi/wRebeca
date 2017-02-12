@@ -8,17 +8,23 @@ package rebeca.wrebeca.common;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Bag implements Istorage {
 
-    List<Message> storage;
+    private List<Message> storage;
+
+    public List<Message> getMessages() {
+        return storage;
+    }
 
     public Bag() {
         storage = new ArrayList<>();
     }
 
     @Override
-    public List<Message> getNaxt() {
+    public List<Message> getNext() {
         return storage;
     }
 
@@ -28,7 +34,7 @@ public class Bag implements Istorage {
         storage.add(findPlace(newMessage),newMsg);
     }
 
-    private void addMessage(int indx, Message newMessage) {
+    public void addMessage(int indx, Message newMessage) {
         Message newMsg = newMessage.deepCopy();
         storage.add(indx,newMsg);
     }
@@ -50,12 +56,19 @@ public class Bag implements Istorage {
 
     @Override
     public Istorage deepCopy() {
-        Bag copied = new Bag();
-        for(int i=0;i<storage.size();i++) {
-            Message cpM = storage.get(i).deepCopy();
-            copied.addMessage(i, cpM);
+        try {
+            Bag copied = this.getClass().newInstance();
+            for(int i=0;i<storage.size();i++) {
+                Message cpM = storage.get(i).deepCopy();
+                copied.addMessage(i, cpM);
+            }
+            return copied;
+        } catch (InstantiationException ex) {
+            Logger.getLogger(Bag.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IllegalAccessException ex) {
+            Logger.getLogger(Bag.class.getName()).log(Level.SEVERE, null, ex);
         }
-        return copied;
+        return null;
     }
 
     @Override

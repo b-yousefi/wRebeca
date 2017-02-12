@@ -1,5 +1,6 @@
 package rebeca.wrebeca.common;
 
+import java.util.List;
 import rebeca.wrebeca.common.Istorage;
 
 /**
@@ -35,6 +36,10 @@ public class State implements Comparable<State> {
 
     public void setStorage(Istorage storage) {
         this.storage = storage;
+    }
+    
+    public List<Message> getEnabledMessages() {
+        return this.storage.getNext();
     }
 
     @Override

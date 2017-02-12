@@ -24,7 +24,7 @@ public class GlobalStateHandler implements Runnable {
         int st_des;
         for (State current_st : gl.getStates()) {
             if (current_st.getStorage().getSize() != 0) {
-                for (Message item : current_st.getStorage().getNaxt()) {
+                for (Message item : current_st.getEnabledMessages()) {
                     Map<State, List<Message>> new_msg_st;
                     State s = current_st.deepCopy();
                     s.getStorage().remove(item);

@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface Istorage extends Comparable<Istorage>, Cloneable {
 
-    public List<Message> getNaxt();
+    public List<Message> getNext();
 
     public void remove(Message removed);
 

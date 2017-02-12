@@ -17,6 +17,7 @@ public class compileInfo {
             classic=false;
             max_thread_num=4;
             heapSize =0;
+            timed = false;
         }
         
         public static compileInfo getInstance(){
@@ -114,6 +115,15 @@ public class compileInfo {
     public int getHeapSize(){
         return this.heapSize;
     }
+    
+        public boolean isTimed() {
+        return timed;
+    }
+
+    public void setTimed(boolean timed) {
+        this.timed = timed;
+    }
+      
         //public static boolean with_tau=false;
         private  boolean compile;
         private  boolean queue;
@@ -126,5 +136,5 @@ public class compileInfo {
         private  int max_thread_num;
         private boolean classic;
         private int heapSize;
-        
+        private boolean timed;  
 }

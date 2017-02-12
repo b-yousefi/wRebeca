@@ -6,6 +6,8 @@ package rebeca.wrebeca.common;
  */
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Message implements Comparable<Message>, Cloneable {
 
@@ -96,12 +98,19 @@ public class Message implements Comparable<Message>, Cloneable {
     }
 
     public Message deepCopy() {
-        Message copied = new Message();
-        copied.methodID = this.methodID;
-        copied.msgArgs = this.msgArgs.deepCopy();
-        copied.recID = new ArrayList<>(this.recID);
-        copied.senderID = this.senderID;
-        return copied;
+        try {
+            Message copied =this.getClass().newInstance();
+            copied.methodID = this.methodID;
+            copied.msgArgs = this.msgArgs.deepCopy();
+            copied.recID = new ArrayList<>(this.recID);
+            copied.senderID = this.senderID;
+            return copied;
+        } catch (InstantiationException ex) {
+            Logger.getLogger(Message.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IllegalAccessException ex) {
+            Logger.getLogger(Message.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return null;
     }
 
     public void setMsgArgs(IMethodArgs msgArgs) {

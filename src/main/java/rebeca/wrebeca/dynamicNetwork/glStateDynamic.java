@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import rebeca.wrebeca.common.State;
@@ -162,14 +164,21 @@ public class glStateDynamic extends GlobalState {
 
     @Override
     public glStateDynamic deepCopy() {
-        glStateDynamic newGl = new glStateDynamic();
-        newGl.top = this.top;
-        newGl.setGlobal_state(new HashMap<>());
-        for (Integer i : this.getGlobal_state().keySet()) {
-            State st = this.getGlobal_state().get(i).deepCopy();
-            newGl.add_lState(st);
+        try {
+            glStateDynamic newGl = this.getClass().newInstance();
+            newGl.top = this.top;
+            newGl.setGlobal_state(new HashMap<>());
+            for (Integer i : this.getGlobal_state().keySet()) {
+                State st = this.getGlobal_state().get(i).deepCopy();
+                newGl.add_lState(st);
+            }
+            return newGl;
+        } catch (InstantiationException ex) {
+            Logger.getLogger(glStateDynamic.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IllegalAccessException ex) {
+            Logger.getLogger(glStateDynamic.class.getName()).log(Level.SEVERE, null, ex);
         }
-        return newGl;
+        return null;
     }
 
     @Override

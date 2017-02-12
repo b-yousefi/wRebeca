@@ -64,6 +64,7 @@ public class frmCompile {
     JCheckBox rdbtnApplyReduction;
     JCheckBox chckbxClts;
     JCheckBox chckbxLts;
+    JCheckBox chckbxTimed;
     JButton btnCancel;
     JButton btnOk;
     JFrame mainWindow;
@@ -134,6 +135,7 @@ public class frmCompile {
         chckbxClts = new JCheckBox("clts");
 
         chckbxLts = new JCheckBox("lts");
+        chckbxTimed = new JCheckBox("timed");
         btnOk = new JButton("Ok");
         btnOk.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
@@ -142,6 +144,7 @@ public class frmCompile {
                 compileInfo.getInstance().setReduction(rdbtnApplyReduction.isSelected());
                 compileInfo.getInstance().setLts(chckbxLts.isSelected());
                 compileInfo.getInstance().setClts(chckbxClts.isSelected());
+                compileInfo.getInstance().setTimed(chckbxTimed.isSelected());
                 compileInfo.getInstance().setCompile(true);
                 compileInfo.getInstance().setMax_thread_num(!txtMaxThread.getText().isEmpty()?Integer.parseInt(txtMaxThread.getText()):0);
                 compileInfo.getInstance().setHeapSize(!txtHeapSize.getText().isEmpty()?Integer.parseInt(txtHeapSize.getText()):0);
@@ -211,7 +214,9 @@ public class frmCompile {
                                                         .addGroup(gl_contentPane.createSequentialGroup()
                                                                 .addComponent(chckbxClts)
                                                                 .addGap(10)
-                                                                .addComponent(chckbxLts))
+                                                                .addComponent(chckbxLts)
+                                                        .addGap(10)
+                                                        .addComponent(chckbxTimed))
                                                         .addComponent(rdbtnApplyReduction))))
                                 .addGap(11))
         );
@@ -244,7 +249,8 @@ public class frmCompile {
                                                 .addPreferredGap(ComponentPlacement.RELATED)
                                                 .addGroup(gl_contentPane.createParallelGroup(Alignment.BASELINE)
                                                         .addComponent(chckbxClts)
-                                                        .addComponent(chckbxLts)))))
+                                                        .addComponent(chckbxLts)
+                                                        .addComponent(chckbxTimed)))))
         );
         contentPane.setLayout(gl_contentPane);
     }

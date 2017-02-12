@@ -23,11 +23,6 @@ public class StateClassic extends State {
     
     public  List<KnownRebec> knownRebecsDef;
     private Integer indx=0;
-//    static{
-//        knownRebecsDef =new ArrayList<>();
-//    }
-//    
-//    private List<Integer> known;
     
     public StateClassic(Istorage store) {
         super(store);

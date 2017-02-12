@@ -14,6 +14,9 @@ import java.util.TimerTask;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import rebeca.timed.MessageTime;
+import rebeca.timed.StateClassicTime;
+import rebeca.timed.StateTime;
 
 import rebeca.wrebeca.common.topologyConstraint.Topology;
 import rebeca.wrebeca.dynamicNetwork.glStateDynamicWithTau;
@@ -28,6 +31,7 @@ public class StateSpaceBuilder {
     final boolean actl;
     final boolean mcrl;
     final boolean lts;
+    final boolean time = true;
     final boolean gradually = false;
     private final Timer timer;
     private static final List<Method> INVARIANTS;
@@ -167,6 +171,14 @@ public class StateSpaceBuilder {
         label += msg.getMsgArgs().toString() + " )";
         if (actl) {
             label = Topology.topologies.get(top).connectionInfo(current_st.getId(), msg.getRecID()) + ", " + msg.getMethodID();
+        } 
+        if(current_st instanceof StateClassicTime && msg instanceof MessageTime) {
+            label = "[("+"rebec"+current_st.getId()+"."+ label + "," + ((MessageTime)msg).getArrival() + "," + 
+                    ((MessageTime)msg).getDeadline() + "),"+ ((StateClassicTime)current_st).getLocalTime() +"]";
+        }
+        if(current_st instanceof StateTime && msg instanceof MessageTime) {
+            label = "[("+"rebec"+current_st.getId()+"."+ label + "," + ((MessageTime)msg).getArrival() + "," + 
+                    ((MessageTime)msg).getDeadline() + "),"+ ((StateTime)current_st).getLocalTime() +"]";
         }
         return label;
     }
