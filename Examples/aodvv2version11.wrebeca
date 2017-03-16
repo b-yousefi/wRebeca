@@ -20,25 +20,25 @@ reactiveclass Node()
     { 
         ip          = i;
         sn          = 1;
-        dip         = new int[5];
-        dsn         = new int[5];
-        route_state = new int[5];
-        neigh_state = new boolean[5];
-        hops        = new int[5][];
-        nhop        = new int[5][];
-        pre         = new boolean[5][]; //number of neighbours
-        store                  = new int[5];
+        dip         = new int[4];
+        dsn         = new int[4];
+        route_state = new int[4];
+        neigh_state = new boolean[4];
+        hops        = new int[4][];
+        nhop        = new int[4][];
+        pre         = new boolean[4][]; //number of neighbours
+        store                  = new int[4];
         
-        for(int j=0;j<5;j++)
+        for(int j=0;j<4;j++)
         {
             store[j]=0;
-            pre[j]=new boolean[5];
+            pre[j]=new boolean[4];
             dsn[j]=-1;
-            nhop[j] = new int[5];
-            hops[j] = new int[5];
+            nhop[j] = new int[4];
+            hops[j] = new int[4];
             neigh_state[j]=false;
             route_state[j]=0;
-            for(int k=0;k<5;k++)
+            for(int k=0;k<4;k++)
             {
                 pre[j][k]=false;
                 hops[j][k]=-1;
@@ -55,7 +55,7 @@ reactiveclass Node()
     
     msgsrv rec_newpkt(int data ,int dip_)
     {
-        boolean[] affected_neighbours=new boolean[5];
+        boolean[] affected_neighbours=new boolean[4];
         if(ip==dip_ ) {
             /* the DATA packet is intended for this node */
             //unicast(self,rec_deliver(data));
@@ -76,7 +76,7 @@ reactiveclass Node()
                 {                           
                     sn++;
                    // unicast(self,resend_rreq(dip_));
-                    rec_rreq(0,dip_,dsn[dip_],self,sn,self,5);
+                    rec_rreq(0,dip_,dsn[dip_],self,sn,self,4);
                 }
             
             }
@@ -89,15 +89,15 @@ reactiveclass Node()
         {                           
             sn++;
             unicast(self,resend_rreq(dip_));
-            rec_rreq(0,dip_,dsn[dip_],self,sn,self,5);
+            rec_rreq(0,dip_,dsn[dip_],self,sn,self,4);
         }
     }
         
     msgsrv rec_rreq(int hops_,int dip_ ,int dsn_ ,int oip_ ,int osn_ ,int sip_, int maxHop) 
     {
-        int[]  dip_sqn=new int[5];
+        int[]  dip_sqn=new int[4];
         int route_num;
-        boolean[] affected_neighbours=new boolean[5];
+        boolean[] affected_neighbours=new boolean[4];
         boolean gen_msg = false;      
         
         if(ip!=oip_)
@@ -124,7 +124,7 @@ reactiveclass Node()
                 {
                     dsn[oip_]=osn_;
                     route_num = 0;
-                    for(int i=0;i<5;i++)
+                    for(int i=0;i<4;i++)
                     {
                         if(nhop[oip_][i]==-1 || nhop[oip_][i]==sip_)
                         {
@@ -136,7 +136,7 @@ reactiveclass Node()
                     {
                         route_state[oip_]=1;
                         //clear other nhop_hops
-                        for(int i=0;i<5;i++)
+                        for(int i=0;i<4;i++)
                         {
                             hops[oip_][i]=-1;
                             nhop[oip_][i]=-1;    
@@ -172,7 +172,7 @@ reactiveclass Node()
                     { 
                         //route_state is valid and neigh_state[sip_] is not confrimed, new route would be added if it offers improvement 
 						route_num = 0;
-						for(int i=0;i<5;i++)
+						for(int i=0;i<4;i++)
 						{
 							if(nhop[oip_][i]==-1 || nhop[oip_][i]==sip_)
 							{
@@ -197,13 +197,13 @@ reactiveclass Node()
                 {
                     boolean su = false;
                     pre[dip_][sip_]=true;
-                    for(int i=0;i<5;i++)
+                    for(int i=0;i<4;i++)
                     {
                         int nh = nhop[dip_][i];
                         if(nh!=-1)
                             pre[oip_][nh]=true;
                     }                   
-                    for(int i=0;i<5;i++)
+                    for(int i=0;i<4;i++)
                     {
                         if(nhop[oip_][i]!=-1)
                         {
@@ -229,21 +229,21 @@ reactiveclass Node()
                          /*packet transmission is unsuccessful, a RERR message is generated */
                         route_state[oip_]=2;
                         dip_sqn[oip_]=dsn[oip_];
-                        for(int k=0;k<5;k++)
+                        for(int k=0;k<4;k++)
                         {
                             if(pre[oip_][k]==true){
                                 affected_neighbours[k]=true;
                             }
                         }
-                        for(int j=0;j<5;j++)
+                        for(int j=0;j<4;j++)
                         {  
-							for(int r=0;r<5;r++)
+							for(int r=0;r<4;r++)
 							{
 								if(nhop[oip_][r]!=-1 && nhop[j][0]==nhop[oip_][r])
 								{
 									route_state [j]= 2;
 									dip_sqn[j]=dsn[j];
-									for(int k=0;k<5;k++)
+									for(int k=0;k<4;k++)
 									{
 										if(pre[j][k]==true){
 											affected_neighbours[k]=true;
@@ -269,8 +269,8 @@ reactiveclass Node()
     
     msgsrv rec_rrep(int hops_ ,int dip_ ,int dsn_ ,int oip_ ,int sip_)
     {      
-        int[]  dip_sqn=new int[5];
-        boolean[] affected_neighbours=new boolean[5];
+        int[]  dip_sqn=new int[4];
+        boolean[] affected_neighbours=new boolean[4];
         boolean gen_msg = false;
         int n_hop,route_num;
 		if(dsn[dip_]==-1)
@@ -295,7 +295,7 @@ reactiveclass Node()
 			{
 				dsn[dip_]=dsn_;
 				route_num = 0;
-				for(int i=0;i<5;i++)
+				for(int i=0;i<4;i++)
 				{
 					if(nhop[dip_][i]==-1 || nhop[dip_][i]==sip_)
 					{
@@ -307,7 +307,7 @@ reactiveclass Node()
 				{
 					route_state[dip_]=1;
 					//clear other nhop_hops
-					for(int i=0;i<5;i++)
+					for(int i=0;i<4;i++)
 					{
 						hops[dip_][i]=-1;
 						nhop[dip_][i]=-1;    
@@ -343,7 +343,7 @@ reactiveclass Node()
 				{ 
 					//route_state is valid and neigh_state[sip_] is not confrimed, new route would be added if it offers improvement 
 					route_num = 0;
-					for(int i=0;i<5;i++)
+					for(int i=0;i<4;i++)
 					{
 						if(nhop[dip_][i]==-1 || nhop[dip_][i]==sip_)
 						{
@@ -376,13 +376,13 @@ reactiveclass Node()
 				boolean su = false;
                 hops_ = hops_+1;
                 pre[oip_][sip_]=true;
-                for(int i=0;i<5;i++)
+                for(int i=0;i<4;i++)
                 {
                     n_hop = nhop[oip_][i];
                     if(n_hop!=-1)
                         pre[oip_][n_hop]=true;
                 }
-                for(int i=0;i<5;i++)
+                for(int i=0;i<4;i++)
                 {
                     if(nhop[oip_][i]!=-1)
                     {
@@ -406,21 +406,21 @@ reactiveclass Node()
 					 /*packet transmission is unsuccessful, a RERR message is generated */
 					route_state[oip_]=2;
 					dip_sqn[oip_]=dsn[oip_];
-					for(int k=0;k<5;k++)
+					for(int k=0;k<4;k++)
 					{
 						if(pre[oip_][k]==true){
 							affected_neighbours[k]=true;
 						}
 					}
-					for(int j=0;j<5;j++)
+					for(int j=0;j<4;j++)
 					{  
-						for(int r=0;r<5;r++)
+						for(int r=0;r<4;r++)
 						{
 							if(nhop[oip_][r]!=-1 && nhop[j][0]==nhop[oip_][r])
 							{
 								route_state [j]= 2;
 								dip_sqn[j]=dsn[j];
-								for(int k=0;k<5;k++)
+								for(int k=0;k<4;k++)
 								{
 									if(pre[j][k]==true){
 										affected_neighbours[k]=true;
@@ -438,19 +438,19 @@ reactiveclass Node()
     
     msgsrv rec_rerr(int source_ ,int sip_, int[] rip_rsn) 
     {
-        int[]  dip_sqn=new int[5];
-        boolean[] affected_neighbours=new boolean[5];
+        int[]  dip_sqn=new int[4];
+        boolean[] affected_neighbours=new boolean[4];
         //regenerate rrer for invalidated routes
         if(ip!=source_)
         {
-            for(int i=0;i<5;i++)
+            for(int i=0;i<4;i++)
             {
                 int rsn=rip_rsn[i];
                 if(route_state[i]==1 && nhop[i][0]==sip_ && dsn[i]<rsn && rsn!=0)
                 {
                     route_state [i]= 2;
                     dip_sqn[i]=dsn[i];
-                    for(int j=0;j<5;j++)
+                    for(int j=0;j<4;j++)
                     {
                         if(pre[i][j]==true){
                             affected_neighbours[j]=true;
